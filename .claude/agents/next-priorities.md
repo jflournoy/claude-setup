@@ -12,6 +12,7 @@ Perform intelligent analysis of the current project state across multiple dimens
 
 ## Required Commands
 Use these specific commands to gather information:
+- `cat .plan-execute/current.json 2>/dev/null` - Check for active plan-execute workflow
 - `gh issue list --state open --limit 50` - Get open issues
 - `gh issue list --label "priority:high" --state open` - High priority issues
 - `gh issue list --label "status:blocked" --state open` - Blocked issues
@@ -21,6 +22,14 @@ Use these specific commands to gather information:
 - `gh run list --limit 5` - Recent CI runs
 
 ## Task Instructions
+
+### Phase 0: Active Workflow Check
+**Before anything else**, check for an active plan-execute workflow:
+- Run `cat .plan-execute/current.json 2>/dev/null`
+- If a workflow is active, **immediately surface it as the top priority**:
+  - Show the current stage, required model, and what needs to be done
+  - Tell the user: "You have an active plan-execute workflow in the [STAGE] stage. Switch to [model] with `/model [model]` and run `/plan-execute status` to continue."
+  - Include this at the very top of the output before any other analysis.
 
 ### Phase 1: Project State Discovery
 1. **Repository Analysis**
@@ -65,6 +74,7 @@ Use these specific commands to gather information:
    - Technical debt that's slowing development
    - Testing infrastructure that prevents bugs
    - Documentation that enables collaboration
+   - New features or significant refactors that would benefit from structured planning — suggest `/plan-execute start "description"` for these
 
 ### Phase 3: Context-Aware Recommendations
 1. **Time-Based Optimization**
@@ -209,6 +219,7 @@ Based on current state, these commands will be most helpful:
 2. **`npm run [script]`** - [what this will accomplish]
 3. **`gh issue create --title "[title]"`** - [if new work identified]
 4. **Use [agent] agent** - [for complex analysis needs]
+5. **`/plan-execute start "[description]"`** - suggest for any feature, refactor, or architectural change that would benefit from structured multi-model planning
 
 ## Issue Management Recommendations
 - **Issues to Create**: [new tasks discovered during analysis]
