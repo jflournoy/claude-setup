@@ -60,6 +60,19 @@ Try this right now:
 
 Watch Claude transform from chaos to clarity.
 
+## Test Contracts, Not Implementation
+
+**The most important TDD principle: test behavior, not internals.**
+
+Tests should describe what a thing *does* from the outside — given this input, produce this output or effect. They should not describe *how* it works internally.
+
+- ✅ `expect(parse(input)).toEqual(expected)` — tests the contract
+- ✅ `expect(fs.existsSync(outputPath)).toBe(true)` — tests observable effect
+- ❌ `expect(internalHelper).toHaveBeenCalledWith(x)` — tests implementation
+- ❌ `expect(privateState).toBe(y)` — tests internals
+
+A test suite that survives a full refactor is a good test suite. If your tests break when you rename a private function, they're coupled to implementation, not behavior.
+
 ## Advanced Patterns
 
 - **Wishful Thinking**: Write tests for your dream API

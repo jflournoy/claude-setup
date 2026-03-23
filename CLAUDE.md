@@ -16,6 +16,16 @@ TDD helps Claude produce more focused, correct code by clarifying requirements u
 3. 🔄 **REFACTOR**: Improve code with test safety net
 4. ✓ **COMMIT**: Ship working, tested code
 
+### Test Contracts, Not Implementation
+**CRITICAL: Tests must describe behavior from the caller's perspective — not internal mechanics.**
+
+- ✅ Test inputs and outputs (the contract)
+- ✅ Test observable side effects (files written, messages sent)
+- ❌ Do NOT assert on internal function calls, private state, or call order
+- ❌ Do NOT couple tests to specific implementation details that could change during refactoring
+
+A good test survives a complete rewrite of the implementation. If refactoring breaks your tests without changing behavior, the tests are wrong.
+
 ### The TDD Command
 ```bash
 /tdd start "your feature"  # Guides through the TDD cycle
