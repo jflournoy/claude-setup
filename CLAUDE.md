@@ -1,43 +1,18 @@
 # CLAUDE.md - Project AI Guidelines
 
-## Development Method: TDD
+> **Note to Claude:** This file contains critical rules and commands that apply to all work. For task-specific guidance, consult the guides listed at the bottom (TDD, standards, report rendering, Quarto, HPC architecture). Load them based on what you're working on—don't assume you need everything.
 
-**STRONGLY RECOMMENDED: Use Test-Driven Development for all non-trivial changes**
+## Critical Rules (Always Apply)
 
-TDD helps Claude produce more focused, correct code by clarifying requirements upfront and reducing wildly wrong approaches. This is the default expectation for any feature, refactor, or significant bug fix. Exceptions (typo fixes, one-liners) are rare and should be explicitly justified.
+**These rules are non-negotiable and apply to all work.**
 
-### Benefits of TDD with Claude
-- **Without TDD**: Claude may over-engineer or miss requirements
-- **With TDD**: Claude writes targeted code that meets specific criteria
+## Running commands
 
-### TDD Workflow
-1. 🔴 **RED**: Write a failing test to define requirements
-2. 🟢 **GREEN**: Write minimal code to pass the test
-3. 🔄 **REFACTOR**: Improve code with test safety net
-4. ✓ **COMMIT**: Ship working, tested code
+**CRITICAL: Never include comments in bash command blocks. Run commands without inline or preceding comments.**
 
-### Test Contracts, Not Implementation
-**CRITICAL: Tests must describe behavior from the caller's perspective — not internal mechanics.**
+Doing so makes it hard to approve or deny commands in settings.json
 
-- ✅ Test inputs and outputs (the contract)
-- ✅ Test observable side effects (files written, messages sent)
-- ❌ Do NOT assert on internal function calls, private state, or call order
-- ❌ Do NOT couple tests to specific implementation details that could change during refactoring
-
-A good test survives a complete rewrite of the implementation. If refactoring breaks your tests without changing behavior, the tests are wrong.
-
-### The TDD Command
-```bash
-/tdd start "your feature"  # Guides through the TDD cycle
-```
-
-Consider TDD especially for complex features or when requirements are unclear.
-
-## Critical Instructions
-
-**ALWAYS use `date` command for dates** - Never assume or guess dates. Always run `date "+%Y-%m-%d"` when you need the current date for documentation, commits, or any other purpose.
-
-**NO SILENT FALLBACKS — THIS IS A HARD RULE.**
+### NO SILENT FALLBACKS — THIS IS A HARD RULE
 
 Silent fallbacks are among the most dangerous patterns in software. They mask bugs, produce incorrect results quietly, and make debugging nearly impossible.
 
@@ -54,8 +29,13 @@ The only acceptable fallback pattern is one where:
 2. You have raised your objection to it on the record, AND
 3. The fallback produces a **visible, logged warning** every time it fires.
 
-## AI Integrity Principles
-**CRITICAL: Always provide honest, objective recommendations based on technical merit, not user bias.**
+### ALWAYS use `date` command for dates
+
+Never assume or guess dates. Always run `date "+%Y-%m-%d"` when you need the current date for documentation, commits, or any other purpose.
+
+### AI Integrity Principles
+
+**Always provide honest, objective recommendations based on technical merit, not user bias.**
 
 - **Never agree with users by default** - evaluate each suggestion independently
 - **Challenge bad ideas directly** - if something is technically wrong, say so clearly
@@ -73,97 +53,54 @@ Examples of honest responses:
 - "That's technically feasible but violates [principle] because..."
 - "I'm concerned about [issue]. Let me explain why this won't work as written..."
 
-## Development Workflow
-- Always run quality checks before commits
-- Use custom commands for common tasks
-- Document insights and decisions
-- Estimate Claude usage before starting tasks
-- Track actual vs estimated Claude interactions
+## Quick Command Reference
 
-## Quality Standards
-- Zero errors policy
-- All tests passing before commit
-- No warnings in critical paths
+**Core Workflow**
+- `/tdd` - Test-driven development cycle
+- `/commit` - Quality-checked atomic commits
+- `/push` - Push commits to remote
 
-## Testing Standards
-**CRITICAL: Any error during test execution = test failure**
-
-- **Zero tolerance for test errors** - stderr output, command failures, warnings all mark tests as failed
-- **Integration tests required** for CLI functionality, NPX execution, file operations
-- **Unit tests for speed** - development feedback (<1s)
-- **Integration tests for confidence** - real-world validation (<30s)
-- **Performance budgets** - enforce time limits to prevent hanging tests
-
-## Markdown Standards
-**All markdown files must pass validation before commit**
-
-- **Syntax validation** - Uses remark-lint to ensure valid markdown syntax
-- **Consistent formatting** - Enforces consistent list markers, emphasis, and code blocks
-- **Link validation** - Checks that internal links point to existing files
-- **Auto-fix available** - Run `npm run markdown:fix` to auto-correct formatting issues
-
-### Markdown Quality Checks
-- `npm run markdown:lint` - Validate all markdown files
-- `npm run markdown:fix` - Auto-fix formatting issues
-- Included in `hygiene:quick` and `commit:check` scripts
-- CI validates markdown on every push/PR
-
-### Markdown Style Guidelines
-- Use `-` for unordered lists
-- Use `*` for emphasis, `**` for strong emphasis
-- Use fenced code blocks with language tags
-- Use `.` for ordered list markers
-- Ensure all internal links are valid
-
-## Architecture Principles
-- Keep functions under 15 complexity
-- Code files under 400 lines
-- Comprehensive error handling
-- Prefer functional programming patterns
-- Avoid mutation where possible
-
-## Claude Usage Guidelines
-- Use `/estimate` before starting any non-trivial task
-- Track actual Claude interactions vs estimates
-- Optimize for message efficiency in complex tasks
-- Budget Claude usage for different project phases
-
-**Typical Usage Patterns**:
-- **Bug Fix**: 10-30 messages
-- **Small Feature**: 30-80 messages  
-- **Major Feature**: 100-300 messages
-- **Architecture Change**: 200-500 messages
-
-## Collaboration Guidelines
-- Always add Claude as co-author on commits
-- Run `/hygiene` before asking for help
-- Use `/todo` for quick task capture
-- Document learnings with `/learn`
-- Regular `/reflect` sessions for insights
-
-## Project Standards
-- Test coverage: 60% minimum
-- Documentation: All features documented
-- Error handling: Graceful failures with clear messages
-- Performance: Monitor code complexity and file sizes
-- ALWAYS use atomic commits
-- use emojis, judiciously
-- NEVER Update() a file before you Read() the file.
-
-### TDD Examples
-
-- [🔴 test: add failing test for updateCommandCatalog isolation (TDD RED)](../../commit/00e7a22)
-- [🔴 test: add failing tests for tdd.js framework detection (TDD RED)](../../commit/2ce43d1)
-- [🔴 test: add failing tests for learn.js functions (TDD RED)](../../commit/8b90d58)
-- [🔴 test: add failing tests for formatBytes and estimateTokens (TDD RED)](../../commit/1fdac58)
-- [🔴 test: add failing tests for findBrokenLinks (TDD RED phase)](../../commit/8ec6319)
-
-## Commands
+**Development & Code Quality**
 - `/hygiene` - Project health check
-- `/todo` - Task management
-- `/commit` - Quality-checked commits
-- `/design` - Feature planning
-- `/estimate` - Claude usage cost estimation
+- `/todo` - Task management via GitHub Issues
+- `/markdown-lint` - Validate and fix markdown files
+- `/refactor` - Deep refactoring analysis
+- `/maintainability` - Code maintainability review
+
+**Analysis & Planning**
 - `/next` - AI-recommended priorities
-- `/learn` - Capture insights
-- `/docs` - Update documentation
+- `/plan-execute` - Multi-model plan-and-execute workflow
+- `/causal-design` - Causal study design workflow
+- `/timeline` - Generate timeline from git history
+
+**Documentation & Learning**
+- `/learn` - Capture insights and learnings
+- `/docs` - Update and validate documentation
+- `/docs-explain` - Educational documentation guide
+- `/reflect` - Pause and reflect on current work
+- `/retrospective` - Capture session metadata for analysis
+- `/session-history` - Save and manage conversation transcripts
+
+**Utilities**
+- `/render-report` - Render analysis reports for GitHub Pages
+- `/monitor` - Monitor GitHub repository for test failures/PRs
+- `/continue` - Efficiently resume work from prior session
+- `/condense` - Archive old content from current status
+- `/clean-state` - Reset state tracking file for fresh session
+- `/fix-permissions` - Fix Docker file ownership permissions
+
+See [CLAUDE_workflow.md](CLAUDE_workflow.md) for full collaboration guidelines.
+
+## When to Consult Each Guide
+
+### 🔴 Load for Feature/Bug Work
+
+- [CLAUDE_tdd.md](CLAUDE_tdd.md) — When implementing features, fixing bugs, or refactoring
+  - Defines how to write tests first, then code
+  - Required for any non-trivial code change
+
+### 📋 Load for General Development
+
+- [CLAUDE_standards.md](CLAUDE_standards.md) — Code quality expectations, testing strategy
+  - Consult when: running tests, committing code, reviewing architecture
+  - Covers: complexity limits, test standards, markdown validation, architecture principles
