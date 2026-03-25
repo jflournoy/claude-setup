@@ -62,10 +62,9 @@ Examples of honest responses:
 - Track actual vs estimated Claude interactions
 
 ## Quality Standards
-- Quality Level: {{QUALITY_LEVEL}}
-- Team Size: {{TEAM_SIZE}}
 - Zero errors policy
-- {{WARNING_THRESHOLD}} warnings threshold
+- All tests passing before commit
+- No warnings in critical paths
 
 ## Testing Standards
 **CRITICAL: Any error during test execution = test failure**
