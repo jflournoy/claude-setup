@@ -48,4 +48,5 @@ You are an orchestrator only — you run the script and relay its output. You do
 - During DRAFT and REFINE stages, focus on reading code and planning. Do not modify files.
 - During ISSUES stage, create focused issues with clear acceptance criteria and a "Tests to write" section specifying test cases. Tests MUST include integration tests that exercise the actual call chain with real data — not just unit tests with mocks.
 - During EXECUTE stage, use TDD: write failing tests first, then implement. Work through issues one at a time, committing after each. Tests must cover the wiring/glue code (e.g., how a report calls functions), not just the functions in isolation.
-- During REVIEW stage, be critical. Create new issues for anything that needs fixing.
+- During REVIEW stage, be critical. Create new issues for bugs or improvements found.
+- **Inner loop**: If REVIEW finds issues, create new GH issues, then `/plan-execute stage execute` to fix them. When done, `/plan-execute stage review` to loop back and verify fixes. Repeat until clean, then `/plan-execute done` to finish.

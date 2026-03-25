@@ -430,9 +430,14 @@ function printStageInstructions(stageName, state) {
     console.log('    - Is the code clean and well-tested?');
     console.log('    - Are there follow-up tasks needed?');
     console.log('');
-    console.log('  If issues are found, create new GH issues for fixes.');
+    console.log('  ${BOLD}Inner Loop: Fix bugs found during review${RESET}');
+    console.log('  If issues are found:');
+    console.log('    1. Create new GH issues for the bugs (label them with the plan label)');
+    console.log('    2. Run: ${BOLD}/plan-execute stage execute${RESET} (go back to implement fixes)');
+    console.log('    3. After fixes are done, run: ${BOLD}/plan-execute stage review${RESET} (loop back here)');
     console.log('');
-    console.log(`  When done, run: ${BOLD}/plan-execute done${RESET}`);
+    console.log('  When review is complete with no remaining issues:');
+    console.log(`    Run: ${BOLD}/plan-execute done${RESET}`);
     break;
   }
   }
