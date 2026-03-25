@@ -115,16 +115,6 @@ Examples of honest responses:
 - Use `.` for ordered list markers
 - Ensure all internal links are valid
 
-## Commands
-- `/hygiene` - Project health check
-- `/todo` - Task management
-- `/commit` - Quality-checked commits
-- `/design` - Feature planning
-- `/estimate` - Claude usage cost estimation
-- `/next` - AI-recommended priorities
-- `/learn` - Capture insights
-- `/docs` - Update documentation
-
 ## Architecture Principles
 - Keep functions under 15 complexity
 - Code files under 400 lines
@@ -167,3 +157,13 @@ Examples of honest responses:
 - [🔴 test: add failing tests for learn.js functions (TDD RED)](../../commit/8b90d58)
 - [🔴 test: add failing tests for formatBytes and estimateTokens (TDD RED)](../../commit/1fdac58)
 - [🔴 test: add failing tests for findBrokenLinks (TDD RED phase)](../../commit/8ec6319)
+
+## Commands
+- `/hygiene` - Project health check
+- `/todo` - Task management
+- `/commit` - Quality-checked commits
+- `/design` - Feature planning
+- `/estimate` - Claude usage cost estimation
+- `/next` - AI-recommended priorities
+- `/learn` - Capture insights
+- `/docs` - Update documentation
