@@ -2,9 +2,9 @@
 
 ## Development Method: TDD
 
-**RECOMMENDED: Use Test-Driven Development for new features**
+**STRONGLY RECOMMENDED: Use Test-Driven Development for all non-trivial changes**
 
-TDD helps Claude produce more focused, correct code by clarifying requirements upfront and reducing wildly wrong approaches.
+TDD helps Claude produce more focused, correct code by clarifying requirements upfront and reducing wildly wrong approaches. This is the default expectation for any feature, refactor, or significant bug fix. Exceptions (typo fixes, one-liners) are rare and should be explicitly justified.
 
 ### Benefits of TDD with Claude
 - **Without TDD**: Claude may over-engineer or miss requirements
