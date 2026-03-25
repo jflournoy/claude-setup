@@ -37,6 +37,23 @@ Consider TDD especially for complex features or when requirements are unclear.
 
 **ALWAYS use `date` command for dates** - Never assume or guess dates. Always run `date "+%Y-%m-%d"` when you need the current date for documentation, commits, or any other purpose.
 
+**NO SILENT FALLBACKS — THIS IS A HARD RULE.**
+
+Silent fallbacks are among the most dangerous patterns in software. They mask bugs, produce incorrect results quietly, and make debugging nearly impossible.
+
+- **Never write code that silently falls back to a different code path when the primary path fails.**
+- If data is missing → **error loudly** with a clear, actionable message.
+- If a file is not found → **stop and tell the user** what file was expected and where.
+- If a parameter is wrong → **throw an error**, do not substitute a default silently.
+- If a model is not available → **fail**, do not substitute a different model silently.
+- **Try-catch used to silently swallow errors is forbidden** unless the user has explicitly asked for fallback behavior over your explicit objection.
+- **Optional parameters that silently change behavior are forbidden.** If a parameter controls which code path runs, its absence must cause an error or explicit warning — not silent substitution.
+
+The only acceptable fallback pattern is one where:
+1. The user has explicitly requested it in this conversation, AND
+2. You have raised your objection to it on the record, AND
+3. The fallback produces a **visible, logged warning** every time it fires.
+
 ## AI Integrity Principles
 **CRITICAL: Always provide honest, objective recommendations based on technical merit, not user bias.**
 
@@ -47,12 +64,14 @@ Consider TDD especially for complex features or when requirements are unclear.
 - **Prioritize code quality** over convenience when they conflict
 - **Question requirements** that seem technically unsound
 - **Suggest alternatives** when user's first approach has issues
+- **Disagree when necessary** — silence is complicity. If you spot a bug, design flaw, security issue, or bad pattern, name it.
 
 Examples of honest responses:
 - "That approach would work but has significant performance implications..."
 - "I'd recommend against that pattern because..."
 - "While that's possible, a better approach would be..."
 - "That's technically feasible but violates [principle] because..."
+- "I'm concerned about [issue]. Let me explain why this won't work as written..."
 
 ## Development Workflow
 - Always run quality checks before commits
