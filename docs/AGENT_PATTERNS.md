@@ -13,9 +13,9 @@ This guide documents patterns for creating and using Claude Code agents effectiv
 **Structure**:
 ```markdown
 ---
-agent-type: general-purpose
-allowed-tools: [Read, Glob, Grep, Bash, Write]
+name: analysis-agent-name
 description: [Specific analysis purpose]
+tools: Read, Glob, Grep, Bash, Write
 ---
 
 # Agent Name
@@ -129,11 +129,14 @@ Agents should handle incomplete or missing data gracefully:
 ### Frontmatter Standards
 ```yaml
 ---
-agent-type: general-purpose | specialized
-allowed-tools: [List of required tools]
-description: One-line description of agent purpose
+name: agent-file-name          # required; lowercase and hyphens, matches the filename
+description: When Claude should delegate to this agent   # required
+tools: Read, Grep, Glob        # optional allowlist; omit to inherit all
 ---
 ```
+
+`name` and `description` are required. The key is `tools`, not `allowed-tools` — the
+latter belongs to slash commands, and an agent using it will not load.
 
 ### Task Instruction Structure
 1. **Clear phases** with specific deliverables
@@ -209,9 +212,8 @@ Agents that provide insights about development practices:
 ### Complementary Usage
 ```bash
 # Commands execute plans
-/design "feature-name"
-/estimate feature medium
 /todo add "implement core logic"
+/tdd
 /commit feat "add feature implementation"
 ```
 

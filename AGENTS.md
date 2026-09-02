@@ -68,7 +68,7 @@ Is this something you do routinely?
 ### Scenario 5: Real Example - The Push Command Problem
 **Situation:** We had a 320-line "safe push workflow" command that did quality validation
 **Problem:** Users just wanted `git push`, not a QA audit
-**Solution:** Simplified `/push` to `git push`, moved git complexities to `/push-detailed`
+**Solution:** Simplified `/push` to `git push`, left the rarer git flags to plain git
 **Lesson:** Commands should handle routine operations, CI/CD should handle validation
 
 ### Scenario 6: Major Command → Agent Conversions
@@ -129,11 +129,16 @@ Each agent file contains frontmatter metadata followed by detailed instructions:
 
 ```yaml
 ---
-agent-type: general-purpose | specialized
-allowed-tools: [List of tools the agent can use]
-description: Brief description of the agent's purpose
+name: agent-file-name          # required; lowercase and hyphens, matches the filename
+description: When Claude should delegate to this agent   # required
+tools: Read, Grep, Glob        # optional allowlist; omit to inherit all
+model: sonnet                  # optional: sonnet | opus | haiku | inherit
 ---
 ```
+
+`name` and `description` are required. Note the key is `tools`, not `allowed-tools` —
+`allowed-tools` is the *slash command* key, and using it in an agent silently prevents
+the agent from loading.
 
 Followed by detailed instructions for the agent's task execution.
 
@@ -223,10 +228,12 @@ I want to understand how my development practices have evolved. Use the session-
 ### Project Planning: Mixed
 ```bash
 # Use commands for execution
-/design "feature-name"
-/estimate feature
+/todo add "implement feature"
+/tdd
 /commit feat "implement feature"
 ```
+
+Use the `usage-estimator` agent when you want a cost estimate first.
 
 ## Summary
 

@@ -22,8 +22,9 @@ Once Claude CLI is available, this agent will:
 - Verify all `/command` references exist in `.claude/commands/`
 - Validate file paths and directory structures mentioned
 - Check npm scripts referenced in instructions exist
-- Ensure allowed-tools match actual tool usage
-- Verify agent-type is valid
+- Ensure `tools` matches actual tool usage
+- Verify required frontmatter is present: `name` and `description`
+- Flag `agent-type` or `allowed-tools` keys; both are wrong for agents and stop them loading
 
 ### Level 2: Quality (IMPORTANT)
 - Check for clear objectives and success criteria
