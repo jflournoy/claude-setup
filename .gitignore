@@ -25,6 +25,21 @@ coverage/
 .env.local
 .env.*.local
 
+# --- Un-ignore this repo's product ---
+# The user's global ignore (~/.config/git/ignore) hides CLAUDE.md, CLAUDE_*.md and
+# .claude/ so AI config never lands in work repos. THIS repo is where that config
+# lives, so re-include it here (repo .gitignore outranks the global one).
+# Without these, `git status` silently hides new guides, commands, agents and hooks.
+!CLAUDE.md
+!CLAUDE_*.md
+!.claude/
+
+# VS Code local-history snapshots: editor cruft, not product
+.history/
+
+# vexp local index and daemon state
+.vexp/
+
 # Local Claude settings (user-specific)
 .claude/settings.json
 .claude/settings.local.json
