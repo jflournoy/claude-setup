@@ -1,6 +1,6 @@
 # CLAUDE.md - Project AI Guidelines
 
-> **Note to Claude:** This file contains critical rules and commands that apply to all work. For task-specific guidance, consult the guides listed at the bottom (TDD, standards, report rendering, Quarto, HPC architecture). Load them based on what you're working on—don't assume you need everything.
+> **Note to Claude:** This file contains critical rules and commands that apply to all work. For task-specific guidance, consult the guides listed at the bottom (TDD, standards, Bayesian modeling, writing voice). Load them based on what you're working on—don't assume you need everything.
 
 ## Critical Rules (Always Apply)
 
@@ -70,8 +70,6 @@ Examples of honest responses:
 **Analysis & Planning**
 - `/next` - AI-recommended priorities
 - `/plan-execute` - Multi-model plan-and-execute workflow
-- `/causal-design` - Causal study design workflow
-- `/timeline` - Generate timeline from git history
 
 **Documentation & Learning**
 - `/learn` - Capture insights and learnings
@@ -82,12 +80,7 @@ Examples of honest responses:
 - `/session-history` - Save and manage conversation transcripts
 
 **Utilities**
-- `/render-report` - Render analysis reports for GitHub Pages
 - `/monitor` - Monitor GitHub repository for test failures/PRs
-- `/continue` - Efficiently resume work from prior session
-- `/condense` - Archive old content from current status
-- `/clean-state` - Reset state tracking file for fresh session
-- `/fix-permissions` - Fix Docker file ownership permissions
 
 See [CLAUDE_workflow.md](CLAUDE_workflow.md) for full collaboration guidelines.
 
@@ -104,3 +97,17 @@ See [CLAUDE_workflow.md](CLAUDE_workflow.md) for full collaboration guidelines.
 - [CLAUDE_standards.md](CLAUDE_standards.md) — Code quality expectations, testing strategy
   - Consult when: running tests, committing code, reviewing architecture
   - Covers: complexity limits, test standards, markdown validation, architecture principles
+
+### 📊 Load for Statistical / Modeling Work
+
+- [CLAUDE_bayesian-production-tricks.md](CLAUDE_bayesian-production-tricks.md) — When working
+  on Bayesian models, Stan code, MCMC diagnostics, or time-series inference
+  - Covers: Kalman filters, Pathfinder, reparameterization, correlation-matrix priors,
+    regularized horseshoe, warm-starting, R̂/ESS thresholds
+  - Stan snippets are compile-checked; the R (cmdstanr) and Python (cmdstanpy) calls differ
+
+### ✍️ Load for Reader-Facing Prose
+
+- [CLAUDE_voice.md](CLAUDE_voice.md) — Before writing or editing any prose a reader will see
+  - Report `.qmd` files, figure captions, README and docs pages, supplements
+  - Defines the register dial (paper / commentary / conversational) and the rules for each
