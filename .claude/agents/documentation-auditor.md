@@ -1,8 +1,7 @@
 ---
-agent-type: general-purpose
-allowed-tools: [Read, Glob, Grep, Write]
+name: documentation-auditor
 description: Context-aware audit of documentation that recognizes learning repos vs production repos
-last-updated: 2025-08-18
+tools: Read, Glob, Grep, Write
 ---
 
 # Documentation Auditor Agent

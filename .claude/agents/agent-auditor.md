@@ -1,8 +1,7 @@
 ---
-agent-type: meta-maintenance
-allowed-tools: [Read, Glob, Grep, Write]
+name: agent-auditor
 description: Intelligently audits other agents for quality, correctness, and relevance
-last-updated: 2025-08-17
+tools: Read, Glob, Grep, Write
 ---
 
 # Agent Auditor

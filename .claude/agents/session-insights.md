@@ -1,8 +1,7 @@
 ---
-agent-type: general-purpose
-allowed-tools: [Read, Glob, Bash, Grep, Write]
+name: session-insights
 description: Analyzes session history to extract patterns, learnings, development insights, and productivity recommendations
-last-updated: 2025-08-17
+tools: Read, Glob, Bash, Grep, Write
 ---
 
 # Session Insights Agent

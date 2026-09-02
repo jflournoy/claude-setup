@@ -1,8 +1,8 @@
 ---
-agent-type: general-purpose
-allowed-tools: [Read, Bash, Grep, Glob]
+name: usage-estimator
 description: Analyzes project context to provide intelligent Claude usage estimates for development tasks
-last-updated: 2025-08-17---
+tools: Read, Bash, Grep, Glob
+---
 
 # Usage Estimator Agent
 

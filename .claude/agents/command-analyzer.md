@@ -1,8 +1,7 @@
 ---
-agent-type: general-purpose
-allowed-tools: [Read, Grep, Glob, Bash, Write, Edit]
+name: command-analyzer
 description: Analyzes command usage patterns and optimizes for token efficiency and performance
-last-updated: 2025-08-17
+tools: Read, Grep, Glob, Bash, Write, Edit
 ---
 
 # Command Analyzer & Optimizer Agent

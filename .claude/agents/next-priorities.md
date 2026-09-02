@@ -1,8 +1,7 @@
 ---
-agent-type: general-purpose
-allowed-tools: [Read, Bash, Grep, Glob]
+name: next-priorities
 description: Analyzes project state to recommend next development priorities and actions
-last-updated: 2025-08-18
+tools: Read, Bash, Grep, Glob
 ---
 
 # Next Priorities Agent

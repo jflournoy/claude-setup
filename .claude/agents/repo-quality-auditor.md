@@ -1,8 +1,7 @@
 ---
-agent-type: general-purpose
-allowed-tools: [Read, Glob, Grep, LS, Write]
+name: repo-quality-auditor
 description: Comprehensive repository audit for completeness, conflicts, and utility assessment
-last-updated: 2025-08-17
+tools: Read, Glob, Grep, Write
 ---
 
 # Repository Quality Auditor Agent
