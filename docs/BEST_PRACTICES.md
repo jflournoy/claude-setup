@@ -298,7 +298,7 @@ Implement these checks before allowing commits:
 
 2. **Team Standards**
    - Enforce via commitlint
-   - Use git hooks (husky)
+   - Enforce in CI rather than local git hooks
    - Regular team reviews
 
 3. **Message Quality**
@@ -331,7 +331,7 @@ Implement these checks before allowing commits:
 
 3. **Cost Management**
    - Track token usage per session
-   - Use `/estimate` before tasks
+   - Use the `usage-estimator` agent before tasks
    - Monitor actual vs estimated usage
    - Optimize expensive operations
 

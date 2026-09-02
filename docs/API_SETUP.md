@@ -18,7 +18,7 @@ The API setup allows **GitHub Actions** to run the **Agent Auditor** automatical
 ### What the Agent Auditor Checks
 The **`.claude/agents/agent-auditor.md`** agent that GitHub Actions runs will:
 - 📋 **Audit all agents** in `.claude/agents/` for quality and completeness
-- 🔍 **Validate frontmatter** ensuring proper agent-type and allowed-tools
+- 🔍 **Validate frontmatter** ensuring required `name`/`description` and a correct `tools` key
 - 📝 **Check documentation** for clear instructions and success criteria
 - 🎯 **Verify task focus** ensuring each agent has a single, clear purpose
 - 🚨 **Flag security issues** like overly broad tool access
