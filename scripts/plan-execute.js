@@ -208,7 +208,7 @@ function advance(stageName) {
   if (!validateStageCompletion(currentStage, state)) {
     console.log(`\n❌ ${BOLD}Stage Not Complete${RESET}`);
     console.log(`\nYou're still in the ${STAGES[currentStage].label} stage.`);
-    console.log(`Complete the work and commit before advancing.\n`);
+    console.log('Complete the work and commit before advancing.\n');
     process.exit(1);
   }
 
@@ -259,8 +259,8 @@ function printStageInstructions(stageName, state) {
   console.log(`  Stage: ${stage.color}${stage.label}${RESET}`);
   console.log(`  Required model: ${stage.color}${stage.model}${RESET}`);
   console.log(`  Switch with: /model ${stage.model}\n`);
-  console.log(`  AI: Show this output to the user and STOP.`);
-  console.log(`  Do NOT do the stage work. The user will switch models.\n`);
+  console.log('  AI: Show this output to the user and STOP.');
+  console.log('  Do NOT do the stage work. The user will switch models.\n');
   console.log(`${'─'.repeat(60)}\n`);
   console.log(`${BOLD}Instructions (for the ${stage.model} model after switching):${RESET}\n`);
 
@@ -478,10 +478,10 @@ function status() {
   const isDone = validateStageCompletion(state.stage, state);
   if (!isDone) {
     console.log(`  ⏳ Still working on ${stage.label} stage`);
-    console.log(`  ⏸️  When done, run: /plan-execute next`);
+    console.log('  ⏸️  When done, run: /plan-execute next');
   } else {
     console.log(`  ✅ ${stage.label} stage is complete`);
-    console.log(`  ▶️  Next: /plan-execute next`);
+    console.log('  ▶️  Next: /plan-execute next');
   }
   console.log('');
 

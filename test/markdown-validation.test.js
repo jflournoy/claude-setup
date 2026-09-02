@@ -2,6 +2,7 @@ const { describe, it } = require('node:test');
 const assert = require('node:assert');
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
 const { execSync } = require('child_process');
 
 /**
@@ -51,7 +52,8 @@ describe('Markdown Validation', () => {
   describe('markdown validation functionality', () => {
     it('should validate markdown files without errors', () => {
       // Test that remark can process markdown files
-      const tempFile = path.join(process.cwd(), 'test-markdown.md');
+      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'remark-test-'));
+      const tempFile = path.join(tempDir, 'test-markdown.md');
       const markdown = `# Test File
 
 This is a test markdown file.
@@ -83,9 +85,7 @@ Some **bold** and *italic* text.
         assert.fail('Remark should process valid markdown without errors: ' + error.message);
       } finally {
         // Clean up
-        if (fs.existsSync(tempFile)) {
-          fs.unlinkSync(tempFile);
-        }
+        fs.rmSync(tempDir, { recursive: true, force: true });
       }
     });
   });
