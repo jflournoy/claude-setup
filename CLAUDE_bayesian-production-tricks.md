@@ -6,7 +6,9 @@ principled solutions from this list over ad-hoc fixes.
 
 Stan code is language-agnostic; driver examples are given in R (cmdstanr) first, with Python
 (cmdstanpy) alongside where the call differs meaningfully. Every Stan program here compiles
-under CmdStan 2.38.0, and the diagnostic figures quoted are measured, not estimated.
+under CmdStan 2.38.0 and the diagnostic figures quoted are measured, not estimated; the R and
+Python driver calls are checked against the libraries' documented signatures rather than
+executed, so run an unfamiliar one once before depending on it.
 
 ---
 
@@ -260,14 +262,17 @@ initial values are the smaller part. Reuse all three.
 ```r
 prev <- mod$sample(data = stan_data, chains = 4, parallel_chains = 4)
 
+# $inv_metric(matrix = FALSE) returns a list, one diagonal vector per chain, and
+# metadata()$step_size_adaptation is one value per chain. $sample() documents a
+# single vector and a single initial step size, so collapse across chains.
 warm <- mod$sample(
-  data         = stan_data_new,
-  chains       = 4,
+  data            = stan_data_new,
+  chains          = 4,
   parallel_chains = 4,
-  init         = prev,                    # fit object accepted directly
-  step_size    = prev$metadata()$step_size_adaptation,
-  inv_metric   = prev$inv_metric(matrix = FALSE),
-  iter_warmup  = 200                      # short, but still adapting
+  init            = prev,                                  # fit object accepted directly
+  step_size       = mean(prev$metadata()$step_size_adaptation),
+  inv_metric      = prev$inv_metric(matrix = FALSE)[[1]],
+  iter_warmup     = 200                                    # short, but still adapting
 )
 ```
 
@@ -413,9 +418,9 @@ unreliable.
 
 ```r
 library(loo)
-ll_a   <- fit_a$draws("log_lik")
-r_eff  <- relative_eff(exp(ll_a), chain_id = rep(1:4, each = 1000))
-loo_a  <- loo(ll_a, r_eff = r_eff)
+ll_a  <- fit_a$draws("log_lik")    # 3-D draws_array: iterations x chains x observations
+r_eff <- relative_eff(exp(ll_a))   # chains inferred from the array; no chain_id needed
+loo_a <- loo(ll_a, r_eff = r_eff)
 print(loo_a)                       # inspect the Pareto-k table
 loo_compare(loo_a, loo_b)
 ```
