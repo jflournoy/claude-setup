@@ -37,8 +37,14 @@ coverage/
 # VS Code local-history snapshots: editor cruft, not product
 .history/
 
-# vexp local index and daemon state
+# vexp: machine-local tooling. Hardcodes this machine's extension path and is
+# regenerated on every vexp update, so it is never worth pulling into another
+# project. Files stay on disk and keep working; they just do not travel.
 .vexp/
+.codex/
+.claude/hooks/
+.claude/CLAUDE.md
+.github/copilot-instructions.md
 
 # Local Claude settings (user-specific)
 .claude/settings.json
@@ -67,7 +73,6 @@ desktop.ini
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
-!.vscode/settings.json
 !.vscode/tasks.json
 !.vscode/launch.json
 .idea/
