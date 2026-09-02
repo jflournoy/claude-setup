@@ -59,7 +59,6 @@ function detectFeatures(changes) {
  */
 function findTestsForFeature(feature, testFiles) {
   const basename = path.basename(feature, path.extname(feature));
-  const dirname = path.dirname(feature);
   
   // Possible test file patterns
   const testPatterns = [
@@ -201,7 +200,9 @@ function getGitChanges() {
     const diffOutput = execSync(`git diff --name-status ${baseBranch}...HEAD`, { encoding: 'utf8' });
     return parseGitDiff(diffOutput);
   } catch (error) {
-    // Fallback to last commit
+    // Visible fallback: the base-branch diff failed, so fall back to the last
+    // commit. Never silent - the caller must know the comparison changed.
+    console.warn(`feature-check: could not diff against base branch (${error.message}); falling back to HEAD~1..HEAD`);
     try {
       const diffOutput = execSync('git diff --name-status HEAD~1 HEAD', { encoding: 'utf8' });
       return parseGitDiff(diffOutput);
@@ -250,7 +251,7 @@ function parseGitStats(output) {
   const lines = output.trim().split('\n');
   
   for (const line of lines) {
-    const match = line.match(/^\s*(.+?)\s*\|\s*(\d+)\s*([\+\-]+)/);
+    const match = line.match(/^\s*(.+?)\s*\|\s*(\d+)\s*([+-]+)/);
     if (match) {
       const [, file, , changes] = match;
       const plusCount = (changes.match(/\+/g) || []).length;
