@@ -4,12 +4,21 @@ Reference for Claude. Two jobs: **write a competent Stan model**, and **make it 
 to run on a schedule**. Part 1 is correctness and idiom, Part 2 is performance. When a
 technique belongs to both, it is stated in Part 1 and its speed consequence noted in Part 2.
 
-Every Stan program here compiles under CmdStan 2.38.0 and the quoted diagnostics are measured.
-The R (cmdstanr) and Python (cmdstanpy) driver calls are checked against documented
-signatures rather than executed — run an unfamiliar one once before depending on it.
-
 Assumed context: a model that already fits and is already trusted, that now has to run on a
 daily budget. Optimize in Part 2's order; do not start at the bottom.
+
+**How to read the markers.** Claims carry their evidence, so you can tell what will rot and
+what will not:
+
+| Marker | Means |
+|---|---|
+| `[M]` | **Measured** — this number came from running it; see Provenance for the setup |
+| `[C]` | **Compiles** — verified with `stanc` under the toolchain in Provenance |
+| `[D]` | **Documented** — checked against library docs or source, *not executed* |
+| `[L]` | **Literature** — from the cited reference |
+
+Unmarked prose is general Stan practice with no single source. `[D]` is the weakest class and
+the first to go stale — see Provenance for how to re-check everything.
 
 ---
 
@@ -62,6 +71,7 @@ else to get a well-behaved positive parameter.
 Ill-typed arguments to "~"-statement. No function "half_normal_lpdf" was found
 when looking for distribution "half_normal".
 ```
+`[C]` — this is the literal `stanc` output, not a paraphrase.
 
 A half-normal is a `<lower=0>` declaration plus `normal(0, s)`. Stan drops the truncation
 constant, which does not affect sampling:
@@ -79,7 +89,7 @@ data              { int<lower=1> K; }
 parameters        { vector[K] log_sigma; }
 transformed parameters { vector<lower=0>[K] sigma = exp(log_sigma); }
 model             { log_sigma ~ normal(0, 0.5); }
-// implied lognormal: median 1.00, mode 0.78, 90% interval [0.44, 2.28]
+// implied lognormal: median 1.00, mode 0.78, 90% interval [0.44, 2.28]   [M]
 ```
 
 A half-normal has maximum density *at* zero; that lognormal has zero density there. Use the
@@ -104,7 +114,7 @@ This decouples the prior geometry from the likelihood and removes most divergenc
 **It is not universally better.** Non-centered wins when the data are *weak* relative to the
 prior — few observations per group, `sigma` near zero. Centered wins when the data are
 *strong*: many observations per group pin each `theta` down, and the non-centered form then
-induces a funnel of its own. Betancourt & Girolami (2015) work through both regimes. With
+induces a funnel of its own. Betancourt & Girolami (2015) work through both regimes `[L]`. With
 uneven group sizes, fit both and compare divergences and ESS.
 
 Coming from `brms` or `rstanarm`: they emit the non-centered form for you. Writing Stan by
@@ -130,11 +140,11 @@ Exception: lkj_corr_cholesky_lpdf: Random variable[7] is 0, but must be positive
 `lkj_corr_cholesky_lpdf` evaluates `sum(log(diag(L)))`, and when a diagonal element underflows
 to exactly 0 that term is `-inf` and the function throws. Measured at K=10, 4 chains,
 1000+1000: 26 such warmup messages, and the fit still finished with **0 divergences,
-R̂ = 1.00, Bulk-ESS ≈ 1700–2300**. Judge the fit by sampling-phase divergences and R̂/ESS, not
+R̂ = 1.00, Bulk-ESS ≈ 1700–2300** `[M]`. Judge the fit by sampling-phase divergences and R̂/ESS, not
 by warmup message count.
 
 Hand-rolling the transform buys **no geometric advantage** — Stan's `cholesky_factor_corr`
-*is* the tanh + signed stick-breaking map (`z = tanh(y)`, then
+*is* the tanh + signed stick-breaking map `[L]` (`z = tanh(y)`, then
 `x[i,j] = z[i,j] * sqrt(1 - sum_{j'<j} x[i,j']^2)`), so a hand-rolled version samples in
 exactly the same space.
 
@@ -173,18 +183,20 @@ Three details are load-bearing, and each has bitten a real model:
 - **`rep_matrix(0, K, K)`.** Stan neither initializes nor validates an unconstrained `matrix`
   in transformed parameters. Declare it bare, fill only the lower triangle, and the model
   *runs clean* while writing `nan` into every upper-triangle cell — 4500 of them in a
-  600-draw K=6 fit. A downstream `multi_normal_cholesky(mu, L)` then rejects every proposal.
+  600-draw K=6 fit `[M]`. A downstream `multi_normal_cholesky(mu, L)` then rejects every proposal.
   Silent wrong answers, not a crash.
 - **`vector[n_corr]`, not `matrix[K, K]`.** An oversized parameter block leaves K(K+1)/2
   entries with no prior — an improper posterior. Measured at K=6, one such parameter reached
-  **R̂ = 2.1** with a posterior mean of **1.4e+12**. Because R̂ is per parameter, this trips
+  **R̂ = 2.1** with a posterior mean of **1.4e+12** `[M]`. Because R̂ is per parameter, this trips
   your convergence check on parameters that never enter the model.
 - **The prior scale depends on K.** This parameterization drops the transform's Jacobian, so
   the induced prior on `L` is whatever the unconstrained normal induces — you cannot bolt an
   LKJ prior onto it, and no fixed scale is "LKJ-equivalent" across K. Measured marginal sd of
   an off-diagonal correlation at K=10: `normal(0, 0.5)` gives **0.364**, against **0.243** for
-  LKJ(4) and **0.302** for LKJ(1). That is wider than uniform over correlation matrices — the
+  LKJ(4) and **0.302** for LKJ(1) `[M]`. That is wider than uniform over correlation matrices — the
   opposite of shrinkage.
+
+Simulated, 4000 draws per cell `[M]`:
 
 | K | LKJ(4) marginal sd(r) | matching `normal(0, s)` |
 |---|---|---|
@@ -274,7 +286,7 @@ untrustworthy — refit those folds (`loo::reloo`) or use K-fold.
 
 **LOO assumes exchangeable observations, so it is the wrong tool for time series** — it lets
 the model see the future. Use leave-future-out / rolling-origin CV instead (Bürkner, Gabry &
-Vehtari 2020).
+Vehtari 2020) `[L]`.
 
 For model weights prefer **stacking** over Bayesian model averaging: stacking optimizes
 held-out predictive accuracy directly, while BMA weights by marginal likelihood, which is
@@ -290,7 +302,7 @@ fit$diagnostic_summary()     # divergences, treedepth saturation, E-BFMI
 
 - **R̂ > 1.01**: chains have not mixed — do not use the posterior. (1.05 is the older,
   now-inadequate threshold; Vehtari et al. 2021 tightened it and the Stan Reference Manual
-  follows.)
+  follows `[L]`.)
 - **Bulk-ESS < 400** (≈100 per chain at 4 chains): not enough for reliable posterior means.
 - **Tail-ESS < 400**: Bulk-ESS can look fine while the tails are badly estimated — which is
   exactly where your interval endpoints live. Check both.
@@ -314,7 +326,8 @@ for nothing.
 
 Most people optimize the wrong thing. Two measurements decide which lever to pull.
 
-**Where in the model does time go?** Stan has built-in profiling. Wrap suspect regions:
+**Where in the model does time go?** Stan has built-in profiling `[C]`. Wrap suspect
+regions:
 
 ```stan
 model {
@@ -358,7 +371,7 @@ which matters enormously for a scheduled job — see Stage 4.
 
 ## Stage 1 — Free wins, no model change
 
-**Compiler flags.** Confirmed present in CmdStan 2.38's makefile:
+**Compiler flags.** All three confirmed present in CmdStan 2.38's makefile `[D]`:
 
 ```r
 mod <- cmdstan_model("model.stan", cpp_options = list(
@@ -367,7 +380,7 @@ mod <- cmdstan_model("model.stan", cpp_options = list(
 ))
 ```
 
-Typically 10–30%. `STAN_NO_RANGE_CHECKS` removes the guardrails that produce readable index
+Reported typically 10–30%; unverified here, so measure it on your model. `STAN_NO_RANGE_CHECKS` removes the guardrails that produce readable index
 errors, so enable it only after the model is correct, and turn it off when debugging.
 
 **Run chains in parallel.** Trivial and frequently overlooked:
@@ -398,15 +411,16 @@ y ~ normal(mu, sigma);                        // one
 
 **Use the GLM primitives.** These have hand-written analytic gradients instead of autodiff
 through the composed expression, and they are often the single largest per-gradient win.
-Both verified to compile under 2.38:
+Both compile under 2.38 `[C]`:
 
 ```stan
 y  ~ ordered_logistic_glm(x, beta, cut);   // ordinal outcomes - IRT, Likert
 yb ~ bernoulli_logit_glm(x, alpha, beta);  // binary outcomes
 ```
 
-Also available: `normal_id_glm`, `poisson_log_glm`, `neg_binomial_2_log_glm`,
-`categorical_logit_glm`. If your model builds a linear predictor and feeds it to a link, there
+Also available, all four compiled `[C]`: `normal_id_glm`, `poisson_log_glm`,
+`neg_binomial_2_log_glm`, and `categorical_logit_glm` (note its `alpha` is `vector[C]` and
+`beta` is `matrix[K, C]`, not the row_vector shape the others might lead you to expect). If your model builds a linear predictor and feeds it to a link, there
 is probably a `_glm` form for it.
 
 **Collapse to sufficient statistics.** Repeated identical rows can be aggregated:
@@ -416,7 +430,7 @@ This can cut N by an order of magnitude with no change to the posterior.
 
 ## Stage 3 — Structural, still exact
 
-**Within-chain threading with `reduce_sum`.** Verified available in 2.38. Partition the data
+**Within-chain threading with `reduce_sum`.** Available in 2.38 `[C]`. Partition the data
 sum across threads:
 
 ```stan
@@ -435,7 +449,8 @@ mod <- cmdstan_model("model.stan", cpp_options = list(stan_threads = TRUE))
 fit <- mod$sample(data = stan_data, chains = 4, parallel_chains = 4, threads_per_chain = 4)
 ```
 
-Near-linear until memory bandwidth binds. Budget cores as
+Near-linear until memory bandwidth binds — a general property of the approach, not measured
+here. Budget cores as
 `parallel_chains × threads_per_chain ≤ physical cores`. Start `grainsize` at 1 and let the
 scheduler decide.
 
@@ -555,8 +570,10 @@ approx = model.pathfinder(data=stan_data)
 fit = model.sample(data=stan_data, chains=4, inits=approx.create_inits(chains=4))
 ```
 
-cmdstanr's `init` takes a fit object directly; cmdstanpy's `inits` does not, hence
-`create_inits()`.
+cmdstanr's `init` takes a fit object directly — `CmdStanMCMC`, `CmdStanMLE`, `CmdStanVB`,
+`CmdStanPathfinder`, `CmdStanLaplace`, or a `posterior::draws` — while cmdstanpy's `inits`
+accepts only a number, a dict, a JSON/Rdump path, or a list of those, hence `create_inits()`
+`[D]`.
 
 **Laplace approximation.** Gaussian at the posterior mode, using the Hessian there.
 
@@ -572,7 +589,9 @@ approximation is built around.
 means it — ADVI fails unpredictably on hierarchical models, often without obvious symptoms.
 Prefer Pathfinder or Laplace.
 
-**Prophet, for reference**, defaults to MAP only (`optimize`, L-BFGS falling back to Newton).
+**Prophet, for reference**, defaults to MAP only (`optimize`, L-BFGS falling back to Newton)
+`[D]` — its own docstring says *"If 0, will do MAP estimation… only the uncertainty in the
+trend"*.
 Its intervals come from simulating future changepoints and observation noise; parameter
 uncertainty is not propagated unless you set `mcmc_samples > 0`. Its internal
 `np.random.laplace` draws changepoint magnitudes from the Laplace *distribution* and is
@@ -625,6 +644,63 @@ Worth considering only when you will run inference very many times.
 | Comparing two time series models | Leave-future-out CV, not LOO |
 
 ---
+
+## Provenance and re-verification
+
+**Verified 2026-09-03** against:
+
+| Component | Version |
+|---|---|
+| CmdStan / stanc3 | 2.38.0 |
+| cmdstanpy | 1.3.0 |
+| prophet | 1.3.0 |
+| cmdstanr | not installed; `[D]` claims come from the published reference |
+
+**How each marker was established.**
+
+- `[C]` — the snippet was written to a file and run through `stanc`. Fragments that are not
+  whole programs (illustrative pairs, `functions` blocks) were scaffolded with a minimal
+  `data`/`parameters`/`model` before checking.
+- `[M]` — a full program was compiled and sampled under CmdStan 2.38.0, and the number was
+  read from `stansummary` or from the output CSV. Correlation-prior figures additionally
+  cross-checked against an independent simulation of the same transform, which agreed to
+  three decimals.
+- `[D]` — read from the installed library source (cmdstanpy, prophet) or the published
+  reference (cmdstanr `$sample`, `$inv_metric`, `$metadata`; Stan Reference Manual). **Not
+  executed.** This is the class most likely to drift as libraries change.
+- `[L]` — from the cited paper or manual section.
+
+**Known gaps.** No R driver call was executed, because cmdstanr is not installed in the
+environment this was checked in. The performance percentages in Part 2 Stage 1 are reported
+figures, not measurements. Nothing in Part 2 has been benchmarked end-to-end on a real model —
+the *ordering* of the stages is a reasoned argument from where time goes, not an empirical
+ranking.
+
+**Re-checking the Stan.** Every `[C]` and `[M]` claim rests on code in this file, so it can be
+re-verified directly. This extracts each complete program and compiles it:
+
+```bash
+python3 - <<'EOF'
+import re, subprocess, tempfile, os
+STANC = os.path.expanduser("~/.cmdstan/cmdstan-2.38.0/bin/stanc")
+src = open("CLAUDE_bayesian-production-tricks.md").read()
+for i, b in enumerate(re.findall(r"```stan\n(.*?)```", src, re.S), 1):
+    if not ("parameters" in b and "model" in b and "data" in b):
+        print(f"block {i}: fragment (scaffold to check)"); continue
+    with tempfile.NamedTemporaryFile("w", suffix=".stan", delete=False) as f:
+        f.write(b); path = f.name
+    r = subprocess.run([STANC, "--o=/dev/null", path], capture_output=True, text=True)
+    err = (r.stdout + r.stderr).strip()
+    print(f"block {i}: {'OK' if not err else 'FAIL -> ' + err[:200]}")
+    os.unlink(path)
+EOF
+```
+
+Run this after any edit, and after any CmdStan upgrade. A `[C]` marker that no longer holds is
+a bug in this file, not in your model.
+
+**When updating this guide:** move a claim's marker down, never up, unless you actually redid
+the work. Promoting `[D]` to `[M]` without measuring is how a guide starts lying.
 
 ## References
 
