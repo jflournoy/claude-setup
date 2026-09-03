@@ -300,6 +300,13 @@ fit$summary()[, c("variable", "rhat", "ess_bulk", "ess_tail")]   # [M]
 fit$diagnostic_summary()     # [M] num_divergent, num_max_treedepth, ebfmi
 ```
 
+`fit$summary()$rhat` is exactly `posterior::summarise_draws(draws, "rhat")`, which is the
+rank-normalized split-R̂ of Vehtari et al. — `posterior` computes it independently of your
+CmdStan version, so you get the modern diagnostic even on an older CmdStan whose
+`bin/stansummary` does not `[M]`. Do not call `posterior::rhat()` directly on a multi-chain
+`draws_array` expecting the same number; it returns a different value, and
+`summarise_draws()` is the one that matches `$summary()` `[M]`.
+
 - **R̂ > 1.01**: chains have not mixed — do not use the posterior. (1.05 is the older,
   now-inadequate threshold; Vehtari et al. 2021 tightened it and the Stan Reference Manual
   follows `[L]`.)
