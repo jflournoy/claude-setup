@@ -27,4 +27,4 @@ Token-efficient command that delegates to `scripts/learn.js` for:
 - Search through past learnings
 - Organize by categories and dates
 
-For advanced learning workflows, see `.claude/commands/detailed/learn-detailed.md`.
+For all subcommands and options, run `node scripts/learn.js --help`.

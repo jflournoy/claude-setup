@@ -15,15 +15,15 @@ Keep an eye on your repository's health in the background.
 case "$1" in
   start)
     echo "🚀 Starting repository monitoring..."
-    npm run monitor:start
+    node scripts/monitor-repo.js &
     echo "Monitor running in background. Use '/monitor status' to check."
     ;;
   stop)
     echo "🛑 Stopping repository monitoring..."
-    npm run monitor:stop
+    pkill -f 'node scripts/monitor-repo.js' || echo 'Monitor not running'
     ;;
   status|check)
-    npm run monitor:status
+    node scripts/monitor-repo.js status
     ;;
   *)
     echo "📊 GitHub Repository Monitor"

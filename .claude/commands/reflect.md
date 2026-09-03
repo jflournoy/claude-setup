@@ -9,7 +9,7 @@ description: Pause and reflect on current work
 
 ## Usage
 <bash>
-npm run reflect:${1:-quick}
+node scripts/reflect.js ${1:-quick}
 </bash>
 
 Quick checkpoint to prevent over-engineering and catch assumptions early.

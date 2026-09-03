@@ -16,7 +16,7 @@ Save the current session with comprehensive metadata:
 echo "📝 Capturing session for retrospective analysis..."
 
 # Use session history script to capture with metadata
-npm run session:save "retrospective-$(date +%Y%m%d-%H%M)" --silent
+node scripts/session-history.js save "retrospective-$(date +%Y%m%d-%H%M)" --silent
 
 echo "✅ Session captured with metadata"
 echo ""

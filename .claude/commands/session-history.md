@@ -14,7 +14,7 @@ Save Claude Code conversation transcripts for historical analysis (optional feat
 ## Usage
 
 <bash>
-npm run session:save --silent
+node scripts/session-history.js save --silent
 </bash>
 
 ## What It Does
@@ -44,13 +44,13 @@ Or don't - this feature is entirely optional.
 
 ```bash
 # Save with description
-npm run session:save -- "feature-complete"
+node scripts/session-history.js save -- "feature-complete"
 
 # Save delta only
-npm run session:delta
+node scripts/session-history.js delta
 
 # List recent sessions
-npm run session:list
+node scripts/session-history.js list
 
 ```
 

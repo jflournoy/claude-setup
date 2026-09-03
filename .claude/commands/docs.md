@@ -27,4 +27,4 @@ Token-efficient command that delegates to `scripts/docs.js` for:
 - Show documentation statistics
 - List available commands
 
-For advanced operations, see `.claude/commands/detailed/docs-detailed.md`.
+For all subcommands and options, run `node scripts/docs.js --help`.

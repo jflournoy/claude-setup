@@ -22,7 +22,7 @@ ARGS="$*"
 case "$COMMAND" in
   "list"|"show")
     echo "📋 GitHub Issues:"
-    npm run todo:list --silent
+    node scripts/todo-github.js list --silent
     ;;
     
   "add"|"create")
@@ -31,7 +31,7 @@ case "$COMMAND" in
       exit 1
     fi
     echo "➕ Creating issue: $ARGS"
-    npm run todo:add --silent -- "$ARGS"
+    node scripts/todo-github.js add --silent -- "$ARGS"
     ;;
     
   "done"|"close")
@@ -41,7 +41,7 @@ case "$COMMAND" in
       exit 1
     fi
     echo "✅ Closing issue #$ISSUE_NUM"
-    npm run todo:done --silent -- "$ISSUE_NUM"
+    node scripts/todo-github.js done --silent -- "$ISSUE_NUM"
     ;;
     
   "comment")
@@ -52,12 +52,12 @@ case "$COMMAND" in
       echo "❌ Error: Issue number and comment required"
       exit 1
     fi
-    npm run todo:comment --silent -- "$ISSUE_NUM" "$COMMENT"
+    node scripts/todo-github.js comment --silent -- "$ISSUE_NUM" "$COMMENT"
     ;;
     
   "stats")
     echo "📊 Issue Statistics:"
-    npm run todo:stats --silent
+    node scripts/todo-github.js stats --silent
     ;;
     
   *)
