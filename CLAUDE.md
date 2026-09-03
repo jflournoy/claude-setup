@@ -29,6 +29,35 @@ The only acceptable fallback pattern is one where:
 2. You have raised your objection to it on the record, AND
 3. The fallback produces a **visible, logged warning** every time it fires.
 
+### TEST INTEGRITY — NEVER MAKE A TEST PASS BY WEAKENING IT
+
+**Never change a test solely to make it pass.** A failing test is information. Suppressing it
+destroys the information and leaves the bug.
+
+When a test fails after a change:
+
+1. **Stop and report it.** Say which test, and what the failure actually says.
+2. **Explain why it is failing** — did the change break behavior, or did it correctly change
+   behavior the test still encodes?
+3. **Ask which it is.** That judgment is the user's, not yours.
+
+**Allowed without asking:** adding tests for new behavior; renaming or reorganizing tests
+without changing what they assert; fixing a test that is itself provably wrong, saying so.
+
+**Forbidden without explicit approval:** changing an expected value; loosening an assertion;
+adding a tolerance to make a comparison pass; marking a test skipped, pending, or `.only`
+elsewhere; deleting a failing test; wrapping a failing call so the error is swallowed.
+
+This applies with full force when the number is the deliverable. A weakened assertion in
+analysis code is a published wrong result with a green check mark next to it.
+
+### ENFORCEMENT BEATS DOCUMENTATION
+
+A rule with no mechanism behind it does not happen — it just looks like it does. If a rule
+here matters, prefer a hook, a test, or a script that enforces it over a paragraph asking for
+it. And **the enforcement mechanism is production code**: it gets a test like anything else.
+An unverified gate is worse than no gate, because people stop checking the thing themselves.
+
 ### ALWAYS use `date` command for dates
 
 Never assume or guess dates. Always run `date "+%Y-%m-%d"` when you need the current date for documentation, commits, or any other purpose.
@@ -105,6 +134,26 @@ See [CLAUDE_workflow.md](CLAUDE_workflow.md) for full collaboration guidelines.
   - Covers: Kalman filters, Pathfinder, reparameterization, correlation-matrix priors,
     regularized horseshoe, warm-starting, R̂/ESS thresholds
   - Stan snippets are compile-checked; the R (cmdstanr) and Python (cmdstanpy) calls differ
+
+## Review Agents
+
+Two fire automatically. A `PostToolUse` hook (`.claude/hooks/reviewer-dispatch.js`) routes an
+edited file to its reviewer:
+
+| Edited | Agent |
+|---|---|
+| `*.stan` | `stan-reviewer` — silent-wrong-answer bugs, geometry, wasted cycles |
+| `*.R` `*.Rmd` `*.qmd` | `r-analysis-reviewer` — joins, coercion, non-determinism, claims |
+
+Three are on demand — ask for them by name:
+
+- `statistical-analysis-reviewer` — skeptical peer review of a finished analysis, before it
+  is shared. Design, assumptions, inference, and whether the conclusion is supported.
+- `determinism-reviewer` — finds work done by model reasoning that tested code could do.
+- `voice-authenticator` — checks prose against [CLAUDE_voice.md](CLAUDE_voice.md).
+
+All of them report findings and never edit. Silence them for a session with
+`CLAUDE_REVIEWER_DISPATCH=0`. Adding a file type is one entry in `RULES` plus a test.
 
 ### ✍️ Load for Reader-Facing Prose
 
