@@ -1,141 +1,118 @@
-# Bayesian Methods in Production
+# Stan in Production
 
-Reference for Claude. When working on Bayesian models, probabilistic inference, or time
-series problems, consult this guide and apply these techniques appropriately. Prefer
-principled solutions from this list over ad-hoc fixes.
+Reference for Claude. Two jobs: **write a competent Stan model**, and **make it fast enough
+to run on a schedule**. Part 1 is correctness and idiom, Part 2 is performance. When a
+technique belongs to both, it is stated in Part 1 and its speed consequence noted in Part 2.
 
-Stan code is language-agnostic; driver examples are given in R (cmdstanr) first, with Python
-(cmdstanpy) alongside where the call differs meaningfully. Every Stan program here compiles
-under CmdStan 2.38.0 and the diagnostic figures quoted are measured, not estimated; the R and
-Python driver calls are checked against the libraries' documented signatures rather than
-executed, so run an unfamiliar one once before depending on it.
+Every Stan program here compiles under CmdStan 2.38.0 and the quoted diagnostics are measured.
+The R (cmdstanr) and Python (cmdstanpy) driver calls are checked against documented
+signatures rather than executed — run an unfamiliar one once before depending on it.
 
----
-
-## Making Inference Fast Enough to Run Repeatedly
-
-### Kalman Filter / State-Space Models
-
-Any linear Gaussian ARIMA model is mathematically identical to a state-space model. In
-state-space form, the Kalman filter gives the **exact posterior** `p(x_t | y_1,...,y_t)` in
-**O(K³)** per time step — no MCMC, just matrix multiplications. True online updating: one
-predict step + one update step per new observation.
-
-```text
-State transition:  x_t = B * x_{t-1} + w_t
-Observation:       y_t = H * x_t     + v_t
-```
-
-For VARIMA: stack lagged innovations into the state vector for MA terms. Regressors are
-known inputs to the transition. Fourier seasonality terms fold into the state.
-
-**Breaks when**: non-Gaussian errors or nonlinear dynamics → use particle filters instead.
-
-**Use when**: the model is linear Gaussian and you need sub-second updates on new data.
-
-### Pathfinder
-
-Runs L-BFGS from multiple starting points, then draws importance-resampled samples from the
-best local approximation. Much cheaper than full NUTS warmup, and the default choice when you
-need a fast approximate posterior or a good place to start MCMC from. Available since
-CmdStan 2.33.
-
-```r
-mod <- cmdstanr::cmdstan_model("model.stan")
-pf  <- mod$pathfinder(data = stan_data)
-
-# cmdstanr accepts a fit object directly as `init`
-fit <- mod$sample(data = stan_data, chains = 4, parallel_chains = 4, init = pf)
-```
-
-```python
-approx = model.pathfinder(data=stan_data)
-fit = model.sample(data=stan_data, chains=4, inits=approx.create_inits(chains=4))
-```
-
-Note the asymmetry: cmdstanr's `init` accepts a `CmdStanPathfinder` (also `CmdStanMCMC`,
-`CmdStanMLE`, `CmdStanVB`, `CmdStanLaplace`, or a `posterior::draws` object) directly.
-cmdstanpy's `inits` does not — it takes a number, a dict, a path to a JSON or Rdump file, or
-a list of those, so you must call `.create_inits()` to convert.
-
-### Laplace Approximation
-
-Fit a Gaussian at the posterior mode, using the Hessian at the mode as the covariance. Faster
-than VI. Works well when the posterior is roughly symmetric and unimodal.
-
-```r
-mode <- mod$optimize(data = stan_data, jacobian = TRUE)   # jacobian=TRUE for the true mode
-lap  <- mod$laplace(data = stan_data, mode = mode)
-```
-
-```python
-lap = model.laplace_sample(data=stan_data)
-```
-
-Set `jacobian = TRUE` when optimizing for a Laplace approximation: you want the mode of the
-posterior on the unconstrained scale, which is what the approximation is built around.
-
-**Use when**: posterior is well-behaved and you need speed over accuracy.
-
-**Prophet does not do this.** With the default `mcmc_samples=0`, Prophet runs MAP only
-(`optimize`, L-BFGS falling back to Newton). Its intervals come from simulating future
-changepoints and from observation noise — parameter uncertainty is not propagated at all. Set
-`mcmc_samples > 0` if you need real posterior uncertainty. (Prophet's internal
-`np.random.laplace` calls draw changepoint magnitudes from the Laplace *distribution*; they
-are unrelated to the Laplace approximation.)
-
-### Variational Inference (VI)
-
-Approximate the posterior with a simpler parametric family, optimize the ELBO instead of
-sampling. Often 10–100x faster than MCMC. Biased — underestimates uncertainty, misses
-correlations in mean-field form.
-
-Stan's ADVI (`$variational()` / `model.variational()`) prints `EXPERIMENTAL ALGORITHM:` when
-you run it, and that warning is meant seriously — it fails unpredictably on hierarchical
-models, often without obvious symptoms. Reach for Pathfinder or Laplace first. If you do use
-ADVI, compare it against MCMC on at least one representative dataset before shipping.
-
-Full-rank VI captures correlations at O(K²) parameters, correspondingly slower and less
-stable than mean-field.
-
-### Amortized Inference / Neural Posterior Estimation
-
-Train a neural network to map data → posterior parameters. One expensive upfront training
-run, then inference is instant for new data of the same type. Used in simulation-based
-inference (SBI) when the likelihood is intractable.
-
-**Use when**: you will run inference repeatedly on data from the same generative process.
+Assumed context: a model that already fits and is already trusted, that now has to run on a
+daily budget. Optimize in Part 2's order; do not start at the bottom.
 
 ---
 
-## Making MCMC Itself Faster and More Reliable
+# Part 1 — Writing Competent Stan
 
-### Non-Centered Parameterization
+## Block structure, and what each block costs
 
-The highest-leverage reparameterization for hierarchical models under HMC/NUTS. Instead of
-sampling `theta ~ normal(mu, sigma)` directly, sample `z ~ std_normal()` and recover
-`theta = mu + sigma * z`. This decouples the prior geometry from the likelihood and
-dramatically reduces divergences when `sigma` is small or poorly identified.
+The blocks are not just organization — they determine how often code runs and what gets
+written to disk.
+
+| Block | Runs | Written to output |
+|---|---|---|
+| `data` | once | no |
+| `transformed data` | once | no |
+| `parameters` | — | yes |
+| `transformed parameters` | **every leapfrog step** | **yes, every draw** |
+| `model` | every leapfrog step | no |
+| `generated quantities` | once per saved draw | yes |
+
+Two consequences worth internalizing:
+
+- **Anything constant belongs in `transformed data`.** Computed once instead of millions of
+  times. Standardizing predictors, building index arrays, precomputing `log(x)` — all free
+  if hoisted.
+- **`transformed parameters` is expensive twice over.** It is on the gradient path *and*
+  every element is written to the CSV for every draw. If an intermediate is only needed to
+  build the log density, declare it in a local block inside `model` instead:
 
 ```stan
-// Centered:
-theta ~ normal(mu, sigma);
-
-// Non-centered (in transformed parameters):
-z ~ std_normal();
-theta = mu + sigma * z;
+model {
+  profile("likelihood") {
+    vector[N] eta = X * beta;   // local: on the gradient path, never written to disk
+    y ~ bernoulli_logit(eta);
+  }
+}
 ```
+
+A `matrix[K,K]` in `transformed parameters` with K=50 writes 2500 numbers per draw. At 4000
+draws that is 10 million values you probably never read.
+
+## Constraints and priors
+
+**Declare the constraint; Stan handles the transform.** `real<lower=0> sigma` makes Stan
+sample `log(sigma)` internally and apply the Jacobian for you. You do not need to do anything
+else to get a well-behaved positive parameter.
+
+**Stan has no `half_normal`.** This is a compile error, not a runtime surprise:
+
+```text
+Ill-typed arguments to "~"-statement. No function "half_normal_lpdf" was found
+when looking for distribution "half_normal".
+```
+
+A half-normal is a `<lower=0>` declaration plus `normal(0, s)`. Stan drops the truncation
+constant, which does not affect sampling:
+
+```stan
+real<lower=0> sigma;
+sigma ~ normal(0, 0.1);   // this is half-normal(0, 0.1)
+```
+
+**Sampling on the log scale is a prior choice, not a speed trick.** Since `<lower=0>` already
+samples in log space, declaring `log_sigma` yourself changes only the prior shape:
+
+```stan
+data              { int<lower=1> K; }
+parameters        { vector[K] log_sigma; }
+transformed parameters { vector<lower=0>[K] sigma = exp(log_sigma); }
+model             { log_sigma ~ normal(0, 0.5); }
+// implied lognormal: median 1.00, mode 0.78, 90% interval [0.44, 2.28]
+```
+
+A half-normal has maximum density *at* zero; that lognormal has zero density there. Use the
+log-scale form when you need to exclude `sigma = 0` — it rescues variance components that
+would otherwise collapse. Scale it to your data; `normal(0, 0.5)` on the log scale is fairly
+informative and centred on `sigma ≈ 1`.
+
+## Non-centered parameterization
+
+The standard fix for hierarchical funnels. Rather than sampling `theta ~ normal(mu, sigma)`
+directly, sample a standard normal and rescale:
+
+```stan
+parameters        { real mu; real<lower=0> sigma; vector[K] z; }
+transformed parameters { vector[K] theta = mu + sigma * z; }
+model             { z ~ std_normal(); }
+```
+
+This decouples the prior geometry from the likelihood and removes most divergences when
+`sigma` is small or weakly identified.
 
 **It is not universally better.** Non-centered wins when the data are *weak* relative to the
 prior — few observations per group, `sigma` near zero. Centered wins when the data are
 *strong*: many observations per group pin each `theta` down, and the non-centered form then
-induces its own funnel. Betancourt & Girolami (2015) work through both regimes. With uneven
-group sizes, try both and compare divergences and ESS, or parameterize per group.
+induces a funnel of its own. Betancourt & Girolami (2015) work through both regimes. With
+uneven group sizes, fit both and compare divergences and ESS.
 
-### Correlation Matrices
+Coming from `brms` or `rstanarm`: they emit the non-centered form for you. Writing Stan by
+hand, it is yours to remember.
 
-Use `cholesky_factor_corr` with an LKJ prior. It is correct, it carries its Jacobian, and its
-geometry is good:
+## Correlation matrices
+
+**Use the built-in.** It is correct, it carries its Jacobian, and its geometry is good:
 
 ```stan
 data       { int<lower=1> K; }
@@ -146,25 +123,24 @@ model      { L ~ lkj_corr_cholesky(4); }
 You will sometimes see warmup messages like:
 
 ```text
-Informational Message: The current Metropolis proposal is about to be rejected...
 Exception: lkj_corr_cholesky_lpdf: Random variable[7] is 0, but must be positive!
 ```
 
 **These are usually harmless.** They come from the density, not the geometry:
 `lkj_corr_cholesky_lpdf` evaluates `sum(log(diag(L)))`, and when a diagonal element underflows
-to exactly 0 in floating point that term is `-inf` and the function throws. Measured at K=10,
-4 chains, 1000+1000 iterations: 26 such warmup messages, and the fit still finished with
-**0 divergences, R̂ = 1.00, Bulk-ESS ≈ 1700–2300**. Judge the fit by sampling-phase
-divergences and R̂/ESS, not by warmup message count.
+to exactly 0 that term is `-inf` and the function throws. Measured at K=10, 4 chains,
+1000+1000: 26 such warmup messages, and the fit still finished with **0 divergences,
+R̂ = 1.00, Bulk-ESS ≈ 1700–2300**. Judge the fit by sampling-phase divergences and R̂/ESS, not
+by warmup message count.
 
-Do not hand-roll the transform hoping for better geometry. Stan's `cholesky_factor_corr` *is*
-the tanh + signed stick-breaking map — `z = tanh(y)`, then
-`x[i,j] = z[i,j] * sqrt(1 - sum_{j'<j} x[i,j']^2)` — so a hand-rolled version samples in
-exactly the same space and buys nothing.
+Hand-rolling the transform buys **no geometric advantage** — Stan's `cholesky_factor_corr`
+*is* the tanh + signed stick-breaking map (`z = tanh(y)`, then
+`x[i,j] = z[i,j] * sqrt(1 - sum_{j'<j} x[i,j']^2)`), so a hand-rolled version samples in
+exactly the same space.
 
-**The one real reason to hand-roll** is to put a prior directly on the unconstrained scale,
-which sidesteps `lkj_corr_cholesky_lpdf` entirely. Do that only if the warmup exceptions are
-frequent enough that adaptation actually fails:
+The one real reason to hand-roll is to put a prior directly on the unconstrained scale, which
+sidesteps `lkj_corr_cholesky_lpdf` entirely. Do that only if warmup exceptions are frequent
+enough that adaptation actually fails:
 
 ```stan
 data { int<lower=1> K; }
@@ -188,23 +164,22 @@ transformed parameters {
   }
 }
 model {
-  z_raw ~ normal(0, 0.28);   // K-dependent; see the table below
+  z_raw ~ normal(0, 0.28);   // K-dependent; see the table
 }
 ```
 
-Three details in that snippet are load-bearing:
+Three details are load-bearing, and each has bitten a real model:
 
 - **`rep_matrix(0, K, K)`.** Stan neither initializes nor validates an unconstrained `matrix`
-  in transformed parameters. Declare it bare and fill only the lower triangle and the model
-  still *runs clean* while writing `nan` into every upper-triangle cell — 4500 of them in a
+  in transformed parameters. Declare it bare, fill only the lower triangle, and the model
+  *runs clean* while writing `nan` into every upper-triangle cell — 4500 of them in a
   600-draw K=6 fit. A downstream `multi_normal_cholesky(mu, L)` then rejects every proposal.
   Silent wrong answers, not a crash.
 - **`vector[n_corr]`, not `matrix[K, K]`.** An oversized parameter block leaves K(K+1)/2
-  entries with no prior at all, which is an improper posterior. Measured at K=6:
-  `z_corr_raw[1,1]` reached **R̂ = 2.1** with a posterior mean of **1.4e+12**, a pure random
-  walk. Because R̂ is reported per parameter, this trips the convergence check below on
-  parameters that do not even enter the model.
-- **The prior scale is K-dependent.** This parameterization drops the transform's Jacobian, so
+  entries with no prior — an improper posterior. Measured at K=6, one such parameter reached
+  **R̂ = 2.1** with a posterior mean of **1.4e+12**. Because R̂ is per parameter, this trips
+  your convergence check on parameters that never enter the model.
+- **The prior scale depends on K.** This parameterization drops the transform's Jacobian, so
   the induced prior on `L` is whatever the unconstrained normal induces — you cannot bolt an
   LKJ prior onto it, and no fixed scale is "LKJ-equivalent" across K. Measured marginal sd of
   an off-diagonal correlation at K=10: `normal(0, 0.5)` gives **0.364**, against **0.243** for
@@ -217,56 +192,272 @@ Three details in that snippet are load-bearing:
 | 10 | 0.243 | s ≈ 0.28 |
 | 20 | 0.192 | s ≈ 0.22 |
 
-Run a prior-predictive simulation of the transform at your actual K rather than reusing a
-number from this table.
+Simulate the transform at your actual K rather than reusing a number from this table.
 
-### Priors on Positive Parameters
+## Identification
 
-**Stan has no `half_normal` distribution.** `sigma ~ half_normal(0.1)` is a compile error:
+A model can be correct and still refuse to mix, because the likelihood does not distinguish
+some parameter configurations. The sampler then wanders a ridge and R̂ never settles.
 
-```text
-Ill-typed arguments to "~"-statement. No function "half_normal_lpdf" was found
-when looking for distribution "half_normal".
-```
+- **Factor and loading matrices are rotation- and sign-invariant.** `Lambda * f` and
+  `(Lambda * R) * (R' * f)` give the same likelihood for any orthogonal `R`. Constrain
+  `Lambda` — lower-triangular with positive diagonal is the usual choice — or fix an anchor
+  item per factor. This is the same identification problem you solve in SEM by fixing a
+  loading to 1 or standardizing the factor; Stan will not choose for you.
+- **Label switching in mixtures.** Order a parameter (`ordered[K] mu`) or the components are
+  exchangeable.
+- **Additive constants.** An intercept plus a group mean that both float will trade off
+  forever. Sum-to-zero constrain one.
 
-You get a half-normal by declaring `<lower=0>` and using `normal(0, s)`. Stan handles the
-truncation constant, which is constant and so does not affect sampling:
+Symptom to recognize: high R̂ and low ESS on a *subset* of parameters, while the log density
+itself mixes fine.
 
-```stan
-real<lower=0> sigma;
-sigma ~ normal(0, 0.1);   // half-normal(0, 0.1)
-```
-
-A `<lower=0>` declaration already makes Stan sample `log(sigma)` internally and apply the
-Jacobian, so declaring `log_sigma` yourself is **not** a sampler-geometry optimization. What it
-changes is the prior:
+## Vectorization is idiom, not just speed
 
 ```stan
-data              { int<lower=1> K; }
-parameters        { vector[K] log_sigma; }
-transformed parameters { vector<lower=0>[K] sigma = exp(log_sigma); }
-model             { log_sigma ~ normal(0, 0.5); }
-// implied lognormal: median 1.00, mode 0.78, 90% interval [0.44, 2.28]
+for (n in 1:N) y[n] ~ normal(mu[n], sigma);   // avoid
+y ~ normal(mu, sigma);                        // prefer
 ```
 
-A half-normal has its highest density *at* zero; the lognormal above has zero density there.
-Use the log-scale form when you want to exclude `sigma = 0` — it can rescue a variance
-component that would otherwise collapse. Scale it to your data; `normal(0, 0.5)` on the log
-scale is fairly informative and centered on `sigma ≈ 1`.
+The vectorized form is clearer *and* builds a much smaller autodiff graph. Prefer it
+everywhere; Part 2 quantifies why.
 
-### Warm-Starting from a Previous Posterior
+**`~` versus `target +=`.** The sampling statement drops constant terms, which is what you
+want while sampling. When you need the true log density — for `log_lik` in
+`generated quantities`, say — use the `_lpdf` form. `target += normal_lupdf(...)` is the
+explicit "drop constants" version and matches `~`.
 
-Re-running warmup is mostly about re-learning the **step size** and the **inverse metric**;
-initial values are the smaller part. Reuse all three.
+```stan
+model      { y ~ normal(mu, sigma); }                         // constants dropped
+generated quantities {
+  vector[N] log_lik;
+  for (n in 1:N) log_lik[n] = normal_lpdf(y[n] | mu[n], sigma);  // full density
+}
+```
+
+Getting this wrong does not break sampling, but it silently corrupts LOO.
+
+## What brms and lavaan were doing for you
+
+Writing Stan by hand means taking back work those packages did silently:
+
+| They handled | You now write |
+|---|---|
+| Non-centered hierarchical terms | `z ~ std_normal()` plus the transform |
+| Weakly-informative default priors | Every prior, explicitly |
+| `log_lik` for LOO | A `generated quantities` block |
+| Factor identification | The constraint on `Lambda` |
+| QR reparameterization of predictors | `qr_thin_Q` / `qr_thin_R` if collinearity bites |
+| Sensible parameter naming for `posterior` | Names you choose |
+
+## Validating
+
+**LOO-CV**, computed from draws with no extra fitting:
 
 ```r
-prev <- mod$sample(data = stan_data, chains = 4, parallel_chains = 4)
+library(loo)
+ll_a  <- fit_a$draws("log_lik")    # iterations x chains x observations
+r_eff <- relative_eff(exp(ll_a))   # chains inferred from the array
+loo_a <- loo(ll_a, r_eff = r_eff)
+print(loo_a)                       # read the Pareto-k table, not just the elpd
+loo_compare(loo_a, loo_b)
+```
+
+```python
+import arviz as az
+idata = az.from_cmdstanpy(fit, log_likelihood="log_lik")
+az.compare({"model_a": idata_a, "model_b": idata_b})
+```
+
+Any Pareto-k > 0.7 means importance sampling failed for that observation and the estimate is
+untrustworthy — refit those folds (`loo::reloo`) or use K-fold.
+
+**LOO assumes exchangeable observations, so it is the wrong tool for time series** — it lets
+the model see the future. Use leave-future-out / rolling-origin CV instead (Bürkner, Gabry &
+Vehtari 2020).
+
+For model weights prefer **stacking** over Bayesian model averaging: stacking optimizes
+held-out predictive accuracy directly, while BMA weights by marginal likelihood, which is
+sharply sensitive to the prior in ways that do not track prediction.
+`loo::loo_model_weights(method = "stacking")`.
+
+## The diagnostic gate
+
+```r
+fit$summary()[, c("variable", "rhat", "ess_bulk", "ess_tail")]
+fit$diagnostic_summary()     # divergences, treedepth saturation, E-BFMI
+```
+
+- **R̂ > 1.01**: chains have not mixed — do not use the posterior. (1.05 is the older,
+  now-inadequate threshold; Vehtari et al. 2021 tightened it and the Stan Reference Manual
+  follows.)
+- **Bulk-ESS < 400** (≈100 per chain at 4 chains): not enough for reliable posterior means.
+- **Tail-ESS < 400**: Bulk-ESS can look fine while the tails are badly estimated — which is
+  exactly where your interval endpoints live. Check both.
+- **Divergences > 0**: the sampler hit geometry it could not resolve; the posterior may be
+  biased. Reparameterize, tighten priors, raise `adapt_delta`. Do not ignore a handful.
+- **Thinning does not raise ESS.** It discards information. Thin only to save disk.
+
+Everything in Part 2 is subject to this gate. A faster model that fails it is not faster, it
+is broken.
+
+---
+
+# Part 2 — Making Them Go Brrr
+
+Work down this list in order. Each stage is cheaper and safer than the one below it, and the
+early stages often make the later ones unnecessary. Never start at the bottom: swapping in an
+approximate posterior to fix a problem that was really an unvectorized loop trades correctness
+for nothing.
+
+## Stage 0 — Profile first
+
+Most people optimize the wrong thing. Two measurements decide which lever to pull.
+
+**Where in the model does time go?** Stan has built-in profiling. Wrap suspect regions:
+
+```stan
+model {
+  profile("priors") {
+    z ~ std_normal();
+    sigma ~ normal(0, 1);
+  }
+  profile("likelihood") {
+    vector[N] eta = X * beta;
+    y ~ bernoulli_logit(eta);
+  }
+}
+```
+
+```r
+fit <- mod$sample(data = stan_data, chains = 4, parallel_chains = 4)
+fit$profiles()      # per-block: forward pass, reverse pass, gradient evaluations
+```
+
+This tells you which block to attack, and it is far better than guessing.
+
+**Is it geometry or gradient cost?**
+
+```r
+fit$time()                                            # warmup vs sampling, per chain
+fit$diagnostic_summary()                              # treedepth saturation
+leapfrogs <- sum(fit$sampler_diagnostics()[,,"n_leapfrog__"])
+sampling_seconds / leapfrogs                          # cost per gradient
+```
+
+- **Many leapfrogs per iteration** (treedepth saturating at 10 means 1023 gradient
+  evaluations *per draw*) → geometry problem. Reparameterize. This is the highest-payoff
+  finding on the list.
+- **Few leapfrogs but still slow** → each gradient is expensive. Vectorize, use GLM
+  primitives, hoist constants.
+
+These call for opposite fixes, so measuring first is not optional.
+
+**Is it warmup or sampling?** `fit$time()` splits them. Warmup is commonly 50–70% of total,
+which matters enormously for a scheduled job — see Stage 4.
+
+## Stage 1 — Free wins, no model change
+
+**Compiler flags.** Confirmed present in CmdStan 2.38's makefile:
+
+```r
+mod <- cmdstan_model("model.stan", cpp_options = list(
+  STAN_CPP_OPTIMS = TRUE,        # extra optimization flags
+  STAN_NO_RANGE_CHECKS = TRUE    # removes bounds checks: only once the model is debugged
+))
+```
+
+Typically 10–30%. `STAN_NO_RANGE_CHECKS` removes the guardrails that produce readable index
+errors, so enable it only after the model is correct, and turn it off when debugging.
+
+**Run chains in parallel.** Trivial and frequently overlooked:
+
+```r
+fit <- mod$sample(data = stan_data, chains = 4, parallel_chains = 4)
+```
+
+Four chains run serially on a multi-core box wastes roughly a 4x factor for no reason.
+
+## Stage 2 — Cheap wins, no change to the math
+
+**Stop sampling more than you need.** The default 4×(1000+1000) yields 4000 draws when the
+diagnostic threshold is Bulk-ESS and Tail-ESS ≥ 400. If a run reports ESS in the thousands,
+you are paying for precision you are not using. Halving `iter_sampling` halves that phase.
+Check ESS after cutting, not before.
+
+**Vectorize.** The loop and the vectorized form compute the same number, but the loop builds
+N separate autodiff nodes:
+
+```stan
+for (n in 1:N) y[n] ~ normal(mu[n], sigma);   // N nodes
+y ~ normal(mu, sigma);                        // one
+```
+
+**Hoist anything constant into `transformed data`.** Standardization, index arrays,
+`log()` of fixed inputs. Computed once instead of once per leapfrog.
+
+**Use the GLM primitives.** These have hand-written analytic gradients instead of autodiff
+through the composed expression, and they are often the single largest per-gradient win.
+Both verified to compile under 2.38:
+
+```stan
+y  ~ ordered_logistic_glm(x, beta, cut);   // ordinal outcomes - IRT, Likert
+yb ~ bernoulli_logit_glm(x, alpha, beta);  // binary outcomes
+```
+
+Also available: `normal_id_glm`, `poisson_log_glm`, `neg_binomial_2_log_glm`,
+`categorical_logit_glm`. If your model builds a linear predictor and feeds it to a link, there
+is probably a `_glm` form for it.
+
+**Collapse to sufficient statistics.** Repeated identical rows can be aggregated:
+`bernoulli` over many trials becomes one `binomial`; in item-response data with many
+respondents and few items, identical response patterns collapse to a pattern plus a count.
+This can cut N by an order of magnitude with no change to the posterior.
+
+## Stage 3 — Structural, still exact
+
+**Within-chain threading with `reduce_sum`.** Verified available in 2.38. Partition the data
+sum across threads:
+
+```stan
+functions {
+  real partial(array[] real slice_y, int start, int end, vector mu, real sigma) {
+    return normal_lpdf(to_vector(slice_y) | mu[start:end], sigma);
+  }
+}
+model {
+  target += reduce_sum(partial, y, grainsize, mu, sigma);
+}
+```
+
+```r
+mod <- cmdstan_model("model.stan", cpp_options = list(stan_threads = TRUE))
+fit <- mod$sample(data = stan_data, chains = 4, parallel_chains = 4, threads_per_chain = 4)
+```
+
+Near-linear until memory bandwidth binds. Budget cores as
+`parallel_chains × threads_per_chain ≤ physical cores`. Start `grainsize` at 1 and let the
+scheduler decide.
+
+**Fix the geometry rather than raising `adapt_delta`.** If Stage 0 showed treedepth
+saturation, the answer is non-centered parameterization, log-scale priors on positive
+parameters, or a QR reparameterization for collinear predictors — not `adapt_delta = 0.999`.
+Raising `adapt_delta` shrinks the step size, which *increases* the number of leapfrogs per
+iteration. It buys fewer divergences at the price of a slower run, and it treats the symptom.
+
+## Stage 4 — The lever for scheduled runs
+
+A daily job re-learns the same metric every single day. Warmup is usually the largest block of
+time, and yesterday's step size and inverse metric are very nearly right for today.
+
+```r
+prev <- readRDS("cache/fit_yesterday.rds")
 
 # $inv_metric(matrix = FALSE) returns a list, one diagonal vector per chain, and
 # metadata()$step_size_adaptation is one value per chain. $sample() documents a
 # single vector and a single initial step size, so collapse across chains.
-warm <- mod$sample(
-  data            = stan_data_new,
+fit <- mod$sample(
+  data            = stan_data_today,
   chains          = 4,
   parallel_chains = 4,
   init            = prev,                                  # fit object accepted directly
@@ -278,83 +469,45 @@ warm <- mod$sample(
 
 ```python
 chains = 4
-prev = model.sample(data=stan_data, chains=chains)
-
 par_names = model.src_info()["parameters"].keys()
-inits = [
-    {name: prev.stan_variable(name)[-(i + 1)] for name in par_names}
-    for i in range(chains)
-]
+inits = [{n: prev.stan_variable(n)[-(i + 1)] for n in par_names} for i in range(chains)]
 
-warm = model.sample(
-    data=stan_data_new,
-    chains=chains,
-    inits=inits,
+fit = model.sample(
+    data=stan_data_today, chains=chains, inits=inits,
     step_size=prev.step_size.tolist(),   # ndarray -> list[float]
     inv_metric=prev.inv_metric,          # `.metric` is deprecated
     iter_warmup=200,
 )
 ```
 
-Prefer a short `iter_warmup` over `adapt_engaged=FALSE`. If the new data have shifted the
-posterior, a frozen metric from the old fit is wrong and you get bad sampling with no warning.
-Measure the speedup on your own model before relying on it.
+**Keep adaptation on with a short warmup rather than setting `adapt_engaged = FALSE`.** If the
+new day's data shifted the posterior, a frozen metric is wrong and you get bad sampling with
+no warning. A short warmup re-checks cheaply.
 
-### Sampler Settings for Difficult Models
+**Gate it on diagnostics.** A warm-started run that comes back with R̂ > 1.01 should trigger a
+cold refit, not a silent publish. In a scheduled pipeline this check is the difference between
+a fast job and a fast wrong job.
 
-- `adapt_delta = 0.95` (default 0.8) — smaller step size, fewer divergences, slower
-- `max_treedepth = 12` (default 10) — allows deeper trees for complex posteriors
-- `iter_warmup = 1000, iter_sampling = 1000`
+Measure the gain on your own model rather than trusting a general figure; it depends entirely
+on how much of your runtime is warmup.
 
-Raising `adapt_delta` treats a symptom. If divergences persist above 0.95, the geometry is the
-problem — reparameterize rather than climbing toward 0.999.
+## Stage 5 — Scaling when K is large
 
----
-
-## Handling New Data Without a Full Refit
-
-| Method | Exact? | Requires linear Gaussian? | Cost per update |
-|--------|--------|--------------------------|-----------------|
-| Kalman filter | Yes | Yes | O(K³) |
-| Conjugate updating | Yes | Depends | O(1) |
-| Particle filter (SMC) | Approx | No | O(N_particles) |
-| Streaming VI | Approx | No | O(iterations) |
-| Warm-start MCMC | Full refit | No | Faster; measure it |
-
-### Conjugate Updating
-
-When likelihood and prior are conjugate (Gaussian-Gaussian, Beta-Binomial, Gamma-Poisson), the
-posterior has the same form as the prior — closed-form exact updating with no MCMC. Very fast,
-limited to specific model families.
-
-### Particle Filters / Sequential Monte Carlo
-
-The nonlinear/non-Gaussian generalization of the Kalman filter. Maintain N weighted particles,
-reweight and resample as new data arrives. Watch for particle degeneracy: in high dimensions
-the effective particle count collapses and the filter silently reports overconfident results.
-
----
-
-## Scaling to Large Numbers of Series (Large K)
-
-### Factor Models
-
-Replace a K×K covariance matrix (O(K²) parameters) with R << K latent factors (O(R×K)):
+**Factor models** replace a K×K covariance (O(K²) parameters) with R << K latent factors
+(O(R×K)):
 
 ```text
 y_t = Lambda * f_t + eps_t,   f_t ~ N(0, I_R)
 Cov(y_t) = Lambda * Lambda' + diag(psi)
 ```
 
-For K=50, R=5: 250 vs 2500 parameters. Use when K is large and you suspect low-dimensional
-shared structure. Factor models are rotation- and sign-invariant, so constrain `Lambda` — e.g.
-lower-triangular with positive diagonal — or the chains will not mix.
+K=50, R=5 is 250 parameters instead of 2500. Constrain `Lambda` for identification (Part 1).
+This is factor analysis in the SEM sense; multidimensional IRT is its categorical-outcome
+counterpart, with discriminations playing the role of loadings.
 
-### Sparse VAR with a Regularized Horseshoe
-
-Regularize most cross-lag VAR coefficients toward zero. Use the **regularized** horseshoe
-(Piironen & Vehtari 2017), not the original: the original's Cauchy local scales are unbounded
-above, producing a funnel that NUTS handles badly.
+**Regularized horseshoe** for sparse coefficient matrices — use the regularized form (Piironen
+& Vehtari 2017), not the original, whose unbounded Cauchy local scales create a funnel NUTS
+handles badly:
 
 ```stan
 data {
@@ -381,120 +534,107 @@ model {
 }
 ```
 
-Set `tau_0` from the number of coefficients you expect to be nonzero, not by guessing.
-The Minnesota prior is a fixed, non-adaptive version of the same idea; prefer the regularized
-horseshoe when you do not know which cross-lags are relevant.
+Set `tau_0` from the number of coefficients you expect to be nonzero. The Minnesota prior is a
+fixed, non-adaptive version of the same idea.
 
-### Hierarchical Shrinkage
+## Stage 6 — Trading exactness, last resort
 
-Pool information across related series through shared hyperparameters, non-centered:
+Only after Stages 0–4. These change the answer, so validate against a full MCMC fit on at
+least one representative dataset before shipping, and re-validate periodically.
 
-```stan
-data { int<lower=1> K; }
-parameters {
-  real mu_ar;
-  real<lower=0> sigma_ar;
-  vector[K] z_ar;
-}
-transformed parameters {
-  vector[K] B_own = mu_ar + sigma_ar * z_ar;
-}
-model {
-  z_ar     ~ std_normal();
-  mu_ar    ~ normal(0.3, 0.2);
-  sigma_ar ~ normal(0, 0.1);   // half-normal via the <lower=0> declaration
-}
-```
-
----
-
-## Model Comparison and Validation
-
-### LOO-CV
-
-Compute from posterior draws with no extra fitting. Prefer LOO-CV over WAIC — better
-theoretical properties, and it reports Pareto-k diagnostics that tell you when it is
-unreliable.
+**Pathfinder.** L-BFGS from multiple starting points, then importance-resampled draws. Cheap.
+Best used as an initializer; usable standalone when you need speed over calibration.
 
 ```r
-library(loo)
-ll_a  <- fit_a$draws("log_lik")    # 3-D draws_array: iterations x chains x observations
-r_eff <- relative_eff(exp(ll_a))   # chains inferred from the array; no chain_id needed
-loo_a <- loo(ll_a, r_eff = r_eff)
-print(loo_a)                       # inspect the Pareto-k table
-loo_compare(loo_a, loo_b)
+pf  <- mod$pathfinder(data = stan_data)
+fit <- mod$sample(data = stan_data, chains = 4, init = pf)   # fit object accepted directly
 ```
 
 ```python
-import arviz as az
-idata = az.from_cmdstanpy(fit, log_likelihood="log_lik")
-loo = az.loo(idata)
-az.compare({"model_a": idata_a, "model_b": idata_b})
+approx = model.pathfinder(data=stan_data)
+fit = model.sample(data=stan_data, chains=4, inits=approx.create_inits(chains=4))
 ```
 
-**Read the Pareto-k values, not just the elpd.** Any k > 0.7 means importance sampling has
-failed for that observation and the estimate is untrustworthy; refit those folds exactly
-(`loo::reloo`) or switch to K-fold CV.
+cmdstanr's `init` takes a fit object directly; cmdstanpy's `inits` does not, hence
+`create_inits()`.
 
-**LOO-CV assumes exchangeable observations, so it is the wrong tool for time series** — it lets
-the model see the future. Use leave-future-out / rolling-origin CV instead (Bürkner, Gabry &
-Vehtari 2020). This matters here: most models in this guide are time series.
-
-### Stacking vs Bayesian Model Averaging
-
-Prefer **stacking**. It optimizes held-out predictive accuracy directly, whereas BMA weights by
-marginal likelihood, which is sensitive to the prior in ways that do not track predictive
-quality. `loo::loo_model_weights(method = "stacking")` in R; ArviZ implements both.
-
-### Convergence Diagnostics
+**Laplace approximation.** Gaussian at the posterior mode, using the Hessian there.
 
 ```r
-fit$summary()[, c("variable", "rhat", "ess_bulk", "ess_tail")]
-fit$diagnostic_summary()     # divergences, treedepth saturation, E-BFMI
+mode <- mod$optimize(data = stan_data, jacobian = TRUE)   # jacobian=TRUE for the true mode
+lap  <- mod$laplace(data = stan_data, mode = mode)
 ```
 
-- **R̂ > 1.01**: chains have not mixed — do not use the posterior. Fix: more warmup, better
-  parameterization, tighter priors. (1.05 is the older, now-inadequate threshold; Vehtari et
-  al. 2021 tightened it and the Stan Reference Manual follows.)
-- **Bulk-ESS < 400** (≈100 per chain at 4 chains): not enough effective samples for reliable
-  posterior means.
-- **Tail-ESS < 400**: Bulk-ESS can look fine while the tails are badly estimated — which is
-  exactly where credible-interval endpoints live. Check both.
-- **Divergences > 0**: the sampler hit a region it could not resolve, and the posterior may be
-  biased. Fix: non-centered parameterization, tighter priors, higher `adapt_delta`. Do not
-  ignore even a handful.
-- **Thinning does not raise ESS.** It discards information and lowers it. Thin only to save
-  disk.
+Set `jacobian = TRUE`: you want the mode on the unconstrained scale, which is what the
+approximation is built around.
+
+**ADVI last.** Stan prints `EXPERIMENTAL ALGORITHM:` when you run `$variational()`, and it
+means it — ADVI fails unpredictably on hierarchical models, often without obvious symptoms.
+Prefer Pathfinder or Laplace.
+
+**Prophet, for reference**, defaults to MAP only (`optimize`, L-BFGS falling back to Newton).
+Its intervals come from simulating future changepoints and observation noise; parameter
+uncertainty is not propagated unless you set `mcmc_samples > 0`. Its internal
+`np.random.laplace` draws changepoint magnitudes from the Laplace *distribution* and is
+unrelated to the Laplace approximation.
+
+## Stage 7 — When the structure lets you skip MCMC
+
+**Kalman filter.** Any linear Gaussian ARIMA model is exactly a state-space model, and the
+Kalman filter gives the **exact posterior** `p(x_t | y_1..y_t)` in O(K³) per time step — no
+sampling, just matrix algebra. One predict step plus one update step per new observation, so a
+daily run costs one update rather than a refit.
+
+```text
+State:       x_t = B * x_{t-1} + w_t
+Observation: y_t = H * x_t     + v_t
+```
+
+For VARIMA, stack lagged innovations into the state for MA terms; regressors are known inputs;
+Fourier seasonality folds into the state. Breaks on non-Gaussian errors or nonlinear dynamics.
+
+**Particle filters / SMC** generalize this to nonlinear and non-Gaussian models at
+O(N_particles) per step. Watch for particle degeneracy: in high dimensions the effective
+particle count collapses and the filter reports overconfident results without complaining.
+
+**Conjugate updating.** Gaussian-Gaussian, Beta-Binomial, Gamma-Poisson give closed-form exact
+posterior updates at O(1). Limited to specific families, unbeatable when they apply.
+
+**Amortized inference / SBI.** One expensive training run of a neural network mapping data →
+posterior parameters, then instant inference on new data from the same generative process.
+Worth considering only when you will run inference very many times.
 
 ---
 
-## Quick Decision Guide
+## Quick decision guide
 
-| Situation | Recommended approach |
-|-----------|---------------------|
-| Linear Gaussian model, need online updates | Kalman filter |
-| Non-linear model, need online updates | Particle filter |
-| Need a fast approximate posterior | Pathfinder, then Laplace; ADVI last |
-| MCMC has many divergences | Non-centered parameterization; check which way the funnel points |
-| Correlation matrix warmup exceptions | Usually ignorable — check divergences and R̂ first |
-| Correlation matrix genuinely failing to adapt | Unconstrained parameterization, prior scale calibrated to K |
-| Running the same model repeatedly | Warm-start: reuse `init`, `step_size` and `inv_metric` |
-| K > 20 series | Factor model or regularized-horseshoe VAR |
-| Comparing two models | LOO-CV — read the Pareto-k table |
-| Comparing two **time series** models | Leave-future-out CV, not LOO |
-| Prior run finished, new month of data | Warm-start MCMC, or Kalman update if linear Gaussian |
+| Situation | Do this |
+|---|---|
+| Model is slow and you have not measured | `fit$profiles()`, `fit$time()`, treedepth — Stage 0 |
+| Treedepth saturating | Reparameterize; do not raise `adapt_delta` |
+| Slow gradients, few leapfrogs | Vectorize, GLM primitives, hoist to `transformed data` |
+| Multi-core box, one chain at a time | `parallel_chains`, then `reduce_sum` |
+| ESS in the thousands | Cut `iter_sampling` |
+| Scheduled or daily run | Warm-start: `init`, `step_size`, `inv_metric`, short warmup |
+| Repeated identical observations | Collapse to sufficient statistics |
+| K > 20 series | Factor model or regularized horseshoe |
+| Still too slow, exactness negotiable | Pathfinder, then Laplace; ADVI last |
+| Model is linear Gaussian | Kalman filter — exact, no MCMC |
+| Divergences after any change | Stop; the diagnostic gate outranks the speedup |
+| Comparing two models | LOO-CV, read Pareto-k |
+| Comparing two time series models | Leave-future-out CV, not LOO |
 
 ---
 
 ## References
 
-- Gelman et al., *Bayesian Data Analysis* (3rd ed.)
-- Stan Reference Manual — Constraint Transforms, "Cholesky factors of correlation matrices"
-- Stan Reference Manual — Posterior Analysis (R̂, Bulk-ESS, Tail-ESS)
+- Stan User's Guide — Efficiency Tuning; Parallelization (`reduce_sum`)
+- Stan Reference Manual — Constraint Transforms; Posterior Analysis (R̂, Bulk/Tail-ESS)
+- Stan Functions Reference — GLM primitives
 - Betancourt, *A Conceptual Introduction to Hamiltonian Monte Carlo* (2017)
 - Betancourt & Girolami (2015) — HMC for hierarchical models; when centered beats non-centered
+- Gelman et al., *Bayesian Data Analysis* (3rd ed.)
 - Durbin & Koopman, *Time Series Analysis by State Space Methods*
-- Carvalho, Polson & Scott (2010) — horseshoe prior
 - Piironen & Vehtari (2017) — regularized horseshoe
 - Vehtari, Gelman, Simpson, Carpenter & Bürkner (2021) — improved R̂, Bulk/Tail-ESS,
   *Bayesian Analysis* 16:667–718
