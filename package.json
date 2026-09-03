@@ -5,6 +5,8 @@
   "scripts": {
     "validate": "echo 'Validating command templates...' && find .claude/commands -name '*.md' -exec echo 'Checking {}' \\; -exec head -5 {} \\;",
     "list-commands": "ls -1 .claude/commands/*.md | sed 's|.claude/commands/||' | sed 's|\\.md$||' | sort",
+    "install:global": "node scripts/install-global.js",
+    "install:global:apply": "node scripts/install-global.js --apply",
     "// Core Workflow": "=== Core workflow commands ===",
     "hygiene": "npm run hygiene:quick --silent",
     "hygiene:quick": "npm run lint:check && npm run test:check && npm run markdown:lint && npm run git:status:summary",
