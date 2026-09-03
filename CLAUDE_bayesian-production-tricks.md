@@ -267,9 +267,9 @@ Writing Stan by hand means taking back work those packages did silently:
 **LOO-CV**, computed from draws with no extra fitting:
 
 ```r
-library(loo)
+library(loo)                       # [M] this whole block executed
 ll_a  <- fit_a$draws("log_lik")    # iterations x chains x observations
-r_eff <- relative_eff(exp(ll_a))   # chains inferred from the array
+r_eff <- relative_eff(exp(ll_a))   # chains inferred from the array; no chain_id needed
 loo_a <- loo(ll_a, r_eff = r_eff)
 print(loo_a)                       # read the Pareto-k table, not just the elpd
 loo_compare(loo_a, loo_b)
@@ -296,8 +296,8 @@ sharply sensitive to the prior in ways that do not track prediction.
 ## The diagnostic gate
 
 ```r
-fit$summary()[, c("variable", "rhat", "ess_bulk", "ess_tail")]
-fit$diagnostic_summary()     # divergences, treedepth saturation, E-BFMI
+fit$summary()[, c("variable", "rhat", "ess_bulk", "ess_tail")]   # [M]
+fit$diagnostic_summary()     # [M] num_divergent, num_max_treedepth, ebfmi
 ```
 
 - **R̂ > 1.01**: chains have not mixed — do not use the posterior. (1.05 is the older,
@@ -344,7 +344,7 @@ model {
 
 ```r
 fit <- mod$sample(data = stan_data, chains = 4, parallel_chains = 4)
-fit$profiles()      # per-block: forward pass, reverse pass, gradient evaluations
+fit$profiles()      # [M] columns: name, thread_id, total_time, forward_time, ...
 ```
 
 This tells you which block to attack, and it is far better than guessing.
@@ -352,10 +352,10 @@ This tells you which block to attack, and it is far better than guessing.
 **Is it geometry or gradient cost?**
 
 ```r
-fit$time()                                            # warmup vs sampling, per chain
-fit$diagnostic_summary()                              # treedepth saturation
-leapfrogs <- sum(fit$sampler_diagnostics()[,,"n_leapfrog__"])
-sampling_seconds / leapfrogs                          # cost per gradient
+fit$time()                    # [M] $total, and $chains with chain_id/warmup/sampling/total
+fit$diagnostic_summary()      # [M] num_divergent, num_max_treedepth, ebfmi
+leapfrogs <- sum(fit$sampler_diagnostics()[,,"n_leapfrog__"])   # [M]
+sampling_seconds / leapfrogs  # cost per gradient
 ```
 
 - **Many leapfrogs per iteration** (treedepth saturating at 10 means 1023 gradient
@@ -379,6 +379,8 @@ mod <- cmdstan_model("model.stan", cpp_options = list(
   STAN_NO_RANGE_CHECKS = TRUE    # removes bounds checks: only once the model is debugged
 ))
 ```
+All three flags (with `STAN_THREADS`) confirmed present in the CmdStan makefile at both
+2.35.0 and 2.38.0 `[D]`.
 
 Reported typically 10–30%; unverified here, so measure it on your model. `STAN_NO_RANGE_CHECKS` removes the guardrails that produce readable index
 errors, so enable it only after the model is correct, and turn it off when debugging.
@@ -448,6 +450,7 @@ model {
 mod <- cmdstan_model("model.stan", cpp_options = list(stan_threads = TRUE))
 fit <- mod$sample(data = stan_data, chains = 4, parallel_chains = 4, threads_per_chain = 4)
 ```
+Compiled and sampled with threading enabled `[M]`.
 
 Near-linear until memory bandwidth binds — a general property of the approach, not measured
 here. Budget cores as
@@ -468,9 +471,9 @@ time, and yesterday's step size and inverse metric are very nearly right for tod
 ```r
 prev <- readRDS("cache/fit_yesterday.rds")
 
-# $inv_metric(matrix = FALSE) returns a list, one diagonal vector per chain, and
-# metadata()$step_size_adaptation is one value per chain. $sample() documents a
-# single vector and a single initial step size, so collapse across chains.
+# [M] Executed. $inv_metric(matrix = FALSE) returns a list of length `chains`, each a
+# vector of length n_params; metadata()$step_size_adaptation is one value per chain.
+# $sample() takes a single vector and a single initial step size, so collapse.
 fit <- mod$sample(
   data            = stan_data_today,
   chains          = 4,
@@ -562,7 +565,7 @@ Best used as an initializer; usable standalone when you need speed over calibrat
 
 ```r
 pf  <- mod$pathfinder(data = stan_data)
-fit <- mod$sample(data = stan_data, chains = 4, init = pf)   # fit object accepted directly
+fit <- mod$sample(data = stan_data, chains = 4, init = pf)   # fit object accepted directly [M]
 ```
 
 ```python
@@ -571,15 +574,15 @@ fit = model.sample(data=stan_data, chains=4, inits=approx.create_inits(chains=4)
 ```
 
 cmdstanr's `init` takes a fit object directly — `CmdStanMCMC`, `CmdStanMLE`, `CmdStanVB`,
-`CmdStanPathfinder`, `CmdStanLaplace`, or a `posterior::draws` — while cmdstanpy's `inits`
-accepts only a number, a dict, a JSON/Rdump path, or a list of those, hence `create_inits()`
-`[D]`.
+`CmdStanPathfinder`, `CmdStanLaplace`, or a `posterior::draws`; passing both a `CmdStanMCMC`
+and a `CmdStanPathfinder` is executed and works `[M]`. cmdstanpy's `inits` accepts only a
+number, a dict, a JSON/Rdump path, or a list of those, hence `create_inits()` `[D]`.
 
 **Laplace approximation.** Gaussian at the posterior mode, using the Hessian there.
 
 ```r
 mode <- mod$optimize(data = stan_data, jacobian = TRUE)   # jacobian=TRUE for the true mode
-lap  <- mod$laplace(data = stan_data, mode = mode)
+lap  <- mod$laplace(data = stan_data, mode = mode)        # [M]
 ```
 
 Set `jacobian = TRUE`: you want the mode on the unconstrained scale, which is what the
@@ -647,14 +650,38 @@ Worth considering only when you will run inference very many times.
 
 ## Provenance and re-verification
 
-**Verified 2026-09-03** against:
+**Verified 2026-09-03** in two environments. Claims that hold in both are version-robust
+across at least CmdStan 2.35–2.38.
 
-| Component | Version |
+| Environment | Components |
 |---|---|
-| CmdStan / stanc3 | 2.38.0 |
-| cmdstanpy | 1.3.0 |
-| prophet | 1.3.0 |
-| cmdstanr | not installed; `[D]` claims come from the published reference |
+| Container `jflournoy/verse-cmdstan` | R 4.3.2, cmdstanr 0.8.0, CmdStan 2.35.0, posterior 1.6.1, loo 2.9.0.9000, brms 2.23.1 |
+| Local host | stanc3 2.38.0, cmdstanpy 1.3.0, prophet 1.3.0 |
+
+The container has no cmdstanpy, so **every Python driver call remains `[D]`** — checked
+against cmdstanpy 1.3.0 source, never executed. Every R driver call in this guide was
+executed in the container.
+
+**Executed R API surface** (cmdstanr 0.8.0 / CmdStan 2.35.0), with what was observed:
+
+| Call | Observed |
+|---|---|
+| `fit$time()` | `$total`; `$chains` with `chain_id, warmup, sampling, total` |
+| `fit$profiles()` | per-block rows; columns `name, thread_id, total_time, forward_time, …` |
+| `fit$diagnostic_summary()` | `num_divergent, num_max_treedepth, ebfmi` |
+| `fit$summary()` | includes `rhat, ess_bulk, ess_tail` |
+| `fit$metadata()$step_size_adaptation` | numeric, length = chains |
+| `fit$inv_metric(matrix = FALSE)` | list, length = chains; each a vector of length n_params |
+| `fit$sampler_diagnostics()[,,"n_leapfrog__"]` | summable |
+| `mod$sample(init = <CmdStanMCMC>)` | accepted; warm start ran |
+| `mod$pathfinder()` → `mod$sample(init = pf)` | `CmdStanPathfinder`; accepted as `init` |
+| `mod$optimize(jacobian = TRUE)` → `mod$laplace(mode = )` | `CmdStanMLE` → `CmdStanLaplace` |
+| `loo::relative_eff(exp(ll))` + `loo::loo()` | ran; Pareto-k reported per observation |
+
+Also confirmed under **both** 2.35.0 and 2.38.0: all four complete Stan programs in this file
+compile; the six GLM primitives compile; `reduce_sum` compiles and samples with
+`threads_per_chain`; `profile()` blocks work; `STAN_CPP_OPTIMS`, `STAN_THREADS` and
+`STAN_NO_RANGE_CHECKS` are present in the makefile.
 
 **How each marker was established.**
 
@@ -670,11 +697,15 @@ Worth considering only when you will run inference very many times.
   executed.** This is the class most likely to drift as libraries change.
 - `[L]` — from the cited paper or manual section.
 
-**Known gaps.** No R driver call was executed, because cmdstanr is not installed in the
-environment this was checked in. The performance percentages in Part 2 Stage 1 are reported
-figures, not measurements. Nothing in Part 2 has been benchmarked end-to-end on a real model —
-the *ordering* of the stages is a reasoned argument from where time goes, not an empirical
-ranking.
+**Known gaps.**
+
+- **Python is unexecuted.** No cmdstanpy in the container; all `[D]`.
+- **The Stage 1 percentages are reported, not measured.** Compiler-flag speedups depend on
+  the model; measure yours.
+- **Nothing in Part 2 is benchmarked end-to-end.** The *ordering* of the stages is a reasoned
+  argument from where time goes, not an empirical ranking on a real workload.
+- **`[M]` means the call ran and returned the stated shape**, on small toy models. It does not
+  mean the surrounding advice was benchmarked.
 
 **Re-checking the Stan.** Every `[C]` and `[M]` claim rests on code in this file, so it can be
 re-verified directly. This extracts each complete program and compiles it:
@@ -698,6 +729,18 @@ EOF
 
 Run this after any edit, and after any CmdStan upgrade. A `[C]` marker that no longer holds is
 a bug in this file, not in your model.
+
+**Re-checking the R.** The container is the reference environment, so the R claims are
+reproducible without installing anything:
+
+```bash
+docker run --rm -v "$PWD":/w -w /w jflournoy/verse-cmdstan:latest Rscript your-check.R
+```
+
+Compile any block from this file inside it with
+`cmdstan_model(f, compile = FALSE)$check_syntax()`, which is much faster than a full compile.
+Note the container is CmdStan **2.35.0** while the host used above is 2.38.0 — if a feature
+works in one and not the other, the guide should say which, rather than picking a side.
 
 **When updating this guide:** move a claim's marker down, never up, unless you actually redid
 the work. Promoting `[D]` to `[M]` without measuring is how a guide starts lying.
