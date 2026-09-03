@@ -42,7 +42,7 @@ coverage/
 # project. Files stay on disk and keep working; they just do not travel.
 .vexp/
 .codex/
-.claude/hooks/
+.claude/hooks/vexp-*.sh
 .claude/CLAUDE.md
 .github/copilot-instructions.md
 
