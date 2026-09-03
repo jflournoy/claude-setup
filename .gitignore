@@ -31,6 +31,13 @@
 !LICENSE
 !settings.example.json
 
+# --- Machine-local tooling: re-ignored after the allowlist ---
+# vexp hardcodes this machine's extension path and regenerates on every update.
+hooks/vexp-*.sh
+.github/copilot-instructions.md
+.codex/
+.vexp/
+
 # --- Never, under any circumstances ---
 # Re-ignored after the allowlist so no future rule above can expose them.
 .credentials.json
