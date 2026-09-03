@@ -1,0 +1,67 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(*)",
+      "WebSearch"
+    ],
+    "ask": [
+      "Bash(git push --force*)",
+      "Bash(git push -f*)",
+      "Bash(git push*--force*)",
+      "Bash(git push*--delete*)",
+      "Bash(git push* :*)",
+      "Bash(rm -rf*)",
+      "Bash(rm -fr*)",
+      "Bash(rm -r -f*)",
+      "Bash(rm *-rf*)",
+      "Bash(git reset --hard*)",
+      "Bash(git reset*--hard*)",
+      "Bash(git clean -f*)",
+      "Bash(git clean*-f*)",
+      "Bash(*curl*| sh*)",
+      "Bash(*curl*|sh*)",
+      "Bash(*curl*| bash*)",
+      "Bash(*curl*|bash*)",
+      "Bash(*wget*| sh*)",
+      "Bash(*wget*|sh*)",
+      "Bash(*wget*| bash*)",
+      "Bash(*wget*|bash*)",
+      "Bash(git checkout .*)",
+      "Bash(git checkout -- *)",
+      "Bash(git restore .*)",
+      "Bash(git restore --*)",
+      "Bash(git stash drop*)",
+      "Bash(git stash clear*)",
+      "Bash(git rebase*)",
+      "Bash(git filter-branch*)",
+      "Bash(git branch -D*)",
+      "Bash(git branch -d*)",
+      "Bash(git tag -d*)",
+      "Bash(*--no-verify*)",
+      "Read(secrets/**)",
+      "Read(./secrets/**)",
+      "Read(/workspaces/tlc-analysis/secrets/**)",
+      "Bash(cat secrets/*)",
+      "Bash(cat ./secrets/*)",
+      "Bash(cat *salt*)",
+      "Bash(*secrets/deid_salt*)"
+    ],
+    "additionalDirectories": [
+      "/tmp"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$HOME/.claude/hooks/reviewer-dispatch.js\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -82,34 +82,20 @@ Examples of honest responses:
 - "That's technically feasible but violates [principle] because..."
 - "I'm concerned about [issue]. Let me explain why this won't work as written..."
 
-## Quick Command Reference
+## Commands
 
-**Core Workflow**
-- `/tdd` - Test-driven development cycle
-- `/commit` - Quality-checked atomic commits
-- `/push` - Push commits to remote
+- `/commit` — atomic commits with quality checks
+- `/push` — push, after checking CI is not already red
+- `/hygiene` — project health: detects R, Python or Node and uses that project's runner
+- `/next` — priorities, via the `next-priorities` agent
+- `/refactor` — refactoring analysis for code a human reads
+- `/refactor-verified` — refactoring analysis for code nobody reads, where checks replace review
 
-**Development & Code Quality**
-- `/hygiene` - Project health check
-- `/todo` - Task management via GitHub Issues
-- `/markdown-lint` - Validate and fix markdown files
-- `/refactor` - Deep refactoring analysis
-- `/maintainability` - Code maintainability review
-
-**Analysis & Planning**
-- `/next` - AI-recommended priorities
-- `/plan-execute` - Multi-model plan-and-execute workflow
-
-**Documentation & Learning**
-- `/learn` - Capture insights and learnings
-- `/docs` - Update and validate documentation
-- `/docs-explain` - Educational documentation guide
-- `/reflect` - Pause and reflect on current work
-- `/retrospective` - Capture session metadata for analysis
-- `/session-history` - Save and manage conversation transcripts
-
-**Utilities**
-- `/monitor` - Monitor GitHub repository for test failures/PRs
+Claude Code now covers natively what the rest of this repo's commands used to do:
+transcripts and `--resume` replace session capture, the memory system replaces learning
+capture, `TodoWrite` and `gh` replace todo management, `/loop` and `/schedule` replace
+monitoring, and `/code-review` and `/simplify` replace the quality commands. They were
+removed rather than maintained in parallel.
 
 See [CLAUDE_workflow.md](CLAUDE_workflow.md) for full collaboration guidelines.
 
@@ -137,7 +123,7 @@ See [CLAUDE_workflow.md](CLAUDE_workflow.md) for full collaboration guidelines.
 
 ## Review Agents
 
-Two fire automatically. A `PostToolUse` hook (`.claude/hooks/reviewer-dispatch.js`) routes an
+Two fire automatically. A `PostToolUse` hook (`hooks/reviewer-dispatch.js`) routes an
 edited file to its reviewer:
 
 | Edited | Agent |

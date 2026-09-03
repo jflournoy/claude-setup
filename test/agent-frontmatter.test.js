@@ -3,8 +3,8 @@ const assert = require('node:assert');
 const fs = require('node:fs');
 const path = require('node:path');
 
-const AGENT_DIR = path.join(__dirname, '..', '.claude', 'agents');
-const HOOK = path.join(__dirname, '..', '.claude', 'hooks', 'reviewer-dispatch.js');
+const AGENT_DIR = path.join(__dirname, '..', 'agents');
+const HOOK = path.join(__dirname, '..', 'hooks', 'reviewer-dispatch.js');
 const { RULES } = require(HOOK);
 
 const agentFiles = fs.readdirSync(AGENT_DIR).filter((f) => f.endsWith('.md'));

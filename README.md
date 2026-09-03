@@ -1,414 +1,86 @@
-# Claude Code Command Templates 🚀
+# claude-config
 
-**A living reference implementation of professional Claude Code commands and workflows**
+Personal [Claude Code](https://docs.claude.com/en/docs/claude-code) configuration: guides,
+reviewer agents, and a hook that routes edited files to the reviewer that fits them. Aimed at
+reproducible statistical analysis in R, Stan and Python, where the deliverable is a published
+number and the bug that matters is the one that does not crash.
 
-[![Version](https://img.shields.io/badge/version-2.0.0-blue)](https://github.com/rmurphey/claude-setup)
-[![Commands](https://img.shields.io/badge/commands-14-green)](.claude/commands/)
-[![License](https://img.shields.io/badge/license-MIT-purple)](LICENSE)
-[![Token Efficiency](https://img.shields.io/badge/token%20savings-87%25-orange)](docs/TOKEN_EFFICIENCY.md)
-[![Agent Audit](https://github.com/rmurphey/claude-setup/workflows/Agent%20Audit%20with%20Claude%20Code/badge.svg)](https://github.com/rmurphey/claude-setup/actions/workflows/agent-audit.yml)
+**This repository is checked out as `~/.claude`.** There is no install step and no build
+system — no `package.json`, no dependencies. Tests run on `node --test`, which ships with
+Node.
 
-## What This Is
-
-This is a **working reference repository** that demonstrates an opinionated set of practices for Claude Code development. The commands in `.claude/commands/` are actively used in this repository's development, making it a living example of the patterns it teaches.
-
-## Quick Start (Choose Your Method)
-
-### Method 1: Direct Use via NPX (No Installation)
-```bash
-# Try the tools without installing anything
-npx claude-setup                     # Initialize in current project
-npx claude-setup learn add "insight" # Capture a learning
-npx claude-setup tdd start           # Start TDD workflow
-npx claude-setup docs                # Analyze documentation
-npx claude-setup monitor status      # Check repo health
-```
-
-**🎯 What NPX Setup Installs:**
-- **Claude command templates** (.claude/commands/) - 15+ battle-tested workflow commands
-- **AI agents** (.claude/agents/) - Intelligent automation for complex tasks
-- **Configuration files** (CLAUDE.md, AGENTS.md) - Project guidelines and agent documentation
-- **NPM scripts integration** - Adds essential commands to your package.json (hygiene, todo, commit, etc.)
-- **Script utilities** - Installs helper scripts for learn, tdd, docs, and monitoring features
-
-**Setup Options:**
-```bash
-npx claude-setup                # Interactive setup (recommended)
-npx claude-setup --skip         # Preserve all existing files
-npx claude-setup --backup       # Backup existing files before replacing
-npx claude-setup --force        # Replace all files without prompting
-npx claude-setup --skip-scripts # Install commands only, don't modify package.json
-```
-
-**Conflict Resolution:**
-When existing files are detected, the interactive mode offers:
-- Skip - Keep your customizations
-- Backup - Save originals and install fresh
-- Merge - Add only non-conflicting files
-- Prefix - Add scripts with `claude:` prefix to avoid conflicts
-
-### Method 2: Global Installation
-```bash
-# Install globally for frequent use
-npm install -g claude-setup
-claude-setup          # Initialize commands
-claude-learn add "insight"
-claude-tdd start
-claude-docs
-claude-monitor status
-```
-
-### Method 3: Clone Repository
-```bash
-# Clone and use as your project base
-git clone https://github.com/rmurphey/claude-setup.git my-project
-cd my-project
-# Commands are ready to use in .claude/commands/
-```
-
-## Why This Repository is Useful, Maybe
-
-✅ **Living Reference**: This repo uses its own commands - see our git history  
-✅ **Token-Efficient**: 87% reduction through npm script delegation ([proven metrics](docs/TOKEN_EFFICIENCY.md))  
-✅ **Best Practices**: Based on Anthropic's guidelines and 2025 industry standards  
-✅ **Production-Tested**: Commands refined through real-world usage  
-✅ **Self-Documenting**: The repository demonstrates every pattern it teaches
-
-## 🤖 Automated Intelligence Features
-
-This repository includes agents that can use the Claude API for advanced automation:
-- **Automated agent quality audits** via GitHub Actions
-- **Intelligent code analysis** beyond simple pattern matching
-- **Deep project insights** using Claude's reasoning capabilities
-
-👉 **[See API Setup Guide](docs/API_SETUP.md)** for configuration instructions
-
-## 🎯 Repository Philosophy
-
-This repository demonstrates balanced approaches to Claude Code commands, optimizing for both learning and efficiency. We achieve **87% token reduction** through strategic script delegation while maintaining flexibility where needed.
-
-👉 **[See Token Efficiency Guide](docs/TOKEN_EFFICIENCY.md)** for detailed guidance on when to use different command approaches.
-
-## Command Categories
-
-### 🎯 Core Workflow Commands
-- **`/hygiene`** - Comprehensive project health check ([view command](.claude/commands/hygiene.md))
-- **`/todo`** - Task management with GitHub Issues ([view command](.claude/commands/todo.md))
-- **`/commit`** - Quality-checked commits ([view command](.claude/commands/commit.md))
-- **`/next`** - AI-recommended next steps ([view command](.claude/commands/next.md))
-
-
-### 📚 Documentation & Learning
-- **`/docs`** - Documentation generation ([view command](.claude/commands/docs.md))
-- **`/learn`** - Capture insights ([view command](.claude/commands/learn.md))
-
-### 🚀 Release & Quality
-- **`/push`** - Push with quality checks ([view command](.claude/commands/push.md))
-- **`/tdd`** - Test-driven development workflow ([view command](.claude/commands/tdd.md))
-- **`feature:check`** - Verify new features have tests & docs ([documentation](docs/FEATURE_CHECK.md))
-
-## 🤖 Claude Code Agents
-
-**When commands aren't enough, agents provide intelligent analysis and complex automation.**
-
-### Commands vs Agents
-- **Commands**: Routine tasks you do the same way every time (`/hygiene`, `/commit`)
-- **Agents**: Complex analysis requiring "intelligence" and decision-making
-
-### Available Agents
-
-#### 📊 Analysis & Optimization
-- **`command-analyzer`** - Analyzes command usage patterns and suggests optimizations
-- **`session-insights`** - Extracts patterns from development session history  
-- **`documentation-auditor`** - Audits documentation completeness and consistency
-- **`repo-quality-auditor`** - Comprehensive repository audit for completeness and conflicts
-
-#### 🎯 Planning & Guidance
-- **`next-priorities`** - Analyzes project state to recommend next development priorities
-- **`usage-estimator`** - Provides intelligent Claude usage estimates for development tasks
-
-#### 🧪 Testing & Quality
-- **`test-coverage-advisor`** - Identifies untested code and recommends testing opportunities
-- **`agent-auditor`** - Audits other agents for quality, correctness, and relevance
-
-### When to Use Agents
-Use agents when you need:
-- 🧠 **Analysis**: Analysis across multiple files with pattern recognition
-- 📈 **Insights**: Deep understanding of your development practices
-- 🔧 **Optimization**: Strategic improvements to your workflows
-- 📋 **Planning**: Custom workflows for complex, multi-step processes
-- 🤖 **Self-Maintenance**: Automated quality audits via GitHub Actions
-
-### Quick Examples
-```bash
-# Use a command for routine tasks
-/hygiene
-
-# Use an agent for analysis
-"Use the session-insights agent to analyze my development patterns from the last 3 months"
-
-# Use an agent for optimization  
-"Use the command-analyzer agent to find opportunities to streamline my command library"
-```
-
-**📖 See [AGENTS.md](AGENTS.md) for the complete guide on when and why to use agents vs commands.**
-
-## Development Method
-
-This repository uses Test-Driven Development (TDD) which helps Claude write focused, correct code. 
-See [TDD with Claude Guide](docs/TDD_WITH_CLAUDE.md) for why it works so well with AI assistance.
-
-## Real-World Usage Examples
-
-### This Repository Uses Its Own Commands
-
-Explore our git history to see these commands in action:
-```bash
-git log --grep="Generated with Claude Code" --oneline
-```
-
-Check our project health:
-```bash
-# In Claude Code
-/hygiene
-```
-
-See our active work:
-```bash
-npm run todo:list  # Shows open GitHub issues
-```
-
-## Example Workflow
+## Install
 
 ```bash
-/hygiene                          # Check project health
-/tdd start "new feature"          # Start with tests
-/commit feat "add user auth"      # Quality-checked commit
-/learn "TDD clarified the API"    # Capture insights
+cd ~/.claude
+git init
+git remote add origin git@github.com:jflournoy/claude-setup.git
+git fetch origin
+git checkout -b main origin/main
 ```
 
-👉 **[See Complete Workflows Guide](docs/WORKFLOWS.md)** for detailed development patterns
+`~/.claude` already holds live runtime state and credentials, so `.gitignore` is an
+**allowlist**: everything is ignored, and only authored config is re-included. Verify before
+staging anything:
 
-## Customization Guide
-
-### Adapting Commands to Your Needs
-
-All commands are customizable markdown files in `.claude/commands/`. Common customizations:
-
-#### Adjust Quality Thresholds
-Edit `/hygiene` command to match your standards:
 ```bash
-# In .claude/commands/hygiene.md
-# Change from "max-warnings 10" to your preference
-npx eslint . --max-warnings 0  # Strict: no warnings
+git check-ignore -v .credentials.json   # must print a match
+git status --porcelain                  # must show only authored config
 ```
 
-#### Add Project-Specific Checks
-Extend commands with your tools:
+Then merge the `PostToolUse` block from `settings.example.json` into your own
+`settings.json`, which stays untracked because it is machine-specific.
+
+## What's here
+
+### Guides
+
+Loaded on demand — `CLAUDE.md` says when.
+
+| Guide | For |
+|---|---|
+| `CLAUDE_bayesian-production-tricks.md` | Writing competent Stan, and making it fast enough to run daily. Every claim carries its evidence class; verified against CmdStan 2.35 and 2.38 |
+| `CLAUDE_voice.md` | Writing prose a reader sees, in the author's own register |
+| `CLAUDE_tdd.md`, `CLAUDE_standards.md`, `CLAUDE_workflow.md` | Test discipline, code quality, collaboration |
+
+### Reviewer agents
+
+Two fire automatically. `hooks/reviewer-dispatch.js` reads the edited path and names the
+agent to run:
+
+| Edited | Agent |
+|---|---|
+| `*.stan` | `stan-reviewer` — nan-filled matrices, parameters with no prior, dropped Jacobians, wasted cycles |
+| `*.R` `*.Rmd` `*.qmd` | `r-analysis-reviewer` — joins that lose rows, type coercion, unseeded RNG, stale caches |
+
+Four are on demand: `statistical-analysis-reviewer` (skeptical peer review before a result is
+shared), `determinism-reviewer` (work the model is doing that code should), `voice-authenticator`
+(prose against the voice profile), `next-priorities`.
+
+All report findings and never edit. `CLAUDE_REVIEWER_DISPATCH=0` silences dispatch for a
+session. Adding a file type is one entry in `RULES` plus a test.
+
+### Commands
+
+`/commit`, `/push`, `/hygiene`, `/next`, `/refactor`, `/refactor-verified`.
+
+## Tests
+
 ```bash
-# In .claude/commands/commit.md
-# Add your specific checks
-npm run typecheck
-npm run your-custom-check
+node --test test/*.test.js
 ```
 
-#### Create Custom Commands
-Copy any template as a starting point:
-```bash
-cp .claude/commands/hygiene.md .claude/commands/deploy.md
-# Edit to create deployment workflow
-```
+No install, no dependencies. The suite covers the dispatch table and every failure path, and
+checks every agent's frontmatter — the regression test for a real bug where all eight agents
+used the wrong schema, loaded silently as nothing, and no one noticed for months.
 
-## Command Categories
+## Credit
 
-### 🏃 Quick Actions (< 1 min)
-`/todo`, `/next`, `/hygiene`
-
-### 📝 Documentation & Learning
-`/docs`, `/learn`, `/retrospective`
-
-### 🔧 Development Workflow
-`/commit`, `/push`, `/tdd`
-
-## Understanding Command Templates
-
-Each command is a structured markdown file that guides Claude through specific workflows:
-
-```markdown
----
-allowed-tools: [Bash, Read, Write]  # Tools Claude can use
-description: Brief command description
----
-
-# Command Name
-
-Detailed instructions for Claude to execute...
-
-When you type `/<command>` in Claude Code:
-1. Claude reads the template from `.claude/commands/<command>.md`
-2. Executes the workflow described in the template
-3. Uses only the allowed tools specified
-4. Provides consistent, professional assistance
-```
-
-## Repository Structure
-
-```
-.claude/
-├── commands/           # Command templates (23+ files)
-│   ├── hygiene.md     # Project health checks
-│   ├── commit.md      # Quality-checked commits
-│   ├── todo.md        # Task management
-│   └── ...            # More production-ready commands
-├── learnings/         # Monthly learning archives
-├── agents/            # Claude Code agents
-└── session-history/   # Development session archives
-
-CLAUDE.md              # Project AI guidelines
-GitHub Issues          # Task tracking (via /todo command)
-package.json           # NPM scripts for token efficiency
-
-docs/
-├── BEST_PRACTICES.md  # Comprehensive best practices guide
-├── COMMAND_CATALOG.md # Detailed command reference
-├── TOKEN_EFFICIENCY.md # Token optimization strategies
-└── QUICK_REFERENCE.md # Quick command lookup
-```
-
-## Tips for Success
-
-### 🎯 Start Small
-Begin with core commands: `/hygiene`, `/todo`, `/commit`
-
-### 📊 Track Progress
-Use `/todo` and `/next` to maintain focus
-
-### 🔄 Regular Health Checks
-Run `/hygiene` before and after major changes
-
-### 💡 Capture Learnings
-Use `/learn` to build project knowledge base
-
-### 🎨 Customize Gradually
-Adapt templates as you learn what works for your team
-
-## Advanced Usage
-
-### Continuous Testing
-Run tests automatically as you code:
-```bash
-npm run test:watch    # Node.js watch mode - reruns on file changes
-```
-
-### Chaining Commands
-```bash
-/hygiene && /todo list && /next
-# Full status check → task list → recommendations
-```
-
-### Command Aliases
-Create shortcuts for common workflows:
-```bash
-# In .claude/commands/status.md
-# Combine hygiene + todo + next into one command
-```
-
-### CI/CD Integration
-Use command patterns in your automation:
-```bash
-# In .github/workflows/ci.yml
-# Implement same checks as /hygiene command
-```
-
-## Documentation
-
-### Essential Guides
-- **[Best Practices Guide](docs/BEST_PRACTICES.md)** - Claude Code best practices with citations
-- **[Command Catalog](docs/COMMAND_CATALOG.md)** - Detailed reference for all commands
-- **[Token Efficiency](docs/TOKEN_EFFICIENCY.md)** - How we achieve 87% token reduction
-- **[Quick Reference](docs/QUICK_REFERENCE.md)** - Quick command lookup
-
-### Getting Help
-- **💬 Issues**: [GitHub Issues](https://github.com/rmurphey/claude-setup/issues)
-- **🤝 Discussions**: [GitHub Discussions](https://github.com/rmurphey/claude-setup/discussions)
-- **📧 Contact**: Via GitHub profile
-
-## Why Use This Reference Implementation?
-
-### Proven Benefits
-✅ **87% Token Reduction** - Measured and documented savings  
-✅ **Battle-Tested** - Commands refined through real usage  
-✅ **Living Documentation** - See actual usage in git history  
-✅ **Best Practices** - Based on Anthropic guidelines and industry standards  
-✅ **Self-Improving** - Repository uses its own commands for development  
-
-### Informed By ... 
-- [Anthropic's Claude Code Best Practices](https://www.anthropic.com/engineering/claude-code-best-practices)
-- [How Anthropic Teams Use Claude Code](https://www.anthropic.com/news/how-anthropic-teams-use-claude-code)
-- [Conventional Commits v1.0.0](https://www.conventionalcommits.org/)
-- Community patterns from [Awesome Claude Code](https://github.com/hesreallyhim/awesome-claude-code)
-- Real-world testing and metrics  
-
-## Metrics and Validation
-
-This repository tracks its own usage metrics:
-- Token usage per command
-- Execution time statistics  
-- Error rates and recovery patterns
-- Real workflow timings
-
-See [.claude/metrics.json](.claude/metrics.json) for current data.
-
-## 🤖 Automated Agent Audits
-
-This repository uses Claude Code CLI to automatically audit agents via GitHub Actions.
-
-**Quick Setup**: Add `ANTHROPIC_API_KEY` to GitHub Secrets → Actions
-
-👉 **[Complete API Setup Guide](docs/API_SETUP.md)** - Detailed configuration, security, and troubleshooting
-
-The audit runs weekly and validates agent quality using Claude's intelligence, not just pattern matching. See `.claude/agents/agent-auditor.md` for the audit logic.
-
-## Contributing
-
-This repository serves as a reference, so all contributions must:
-
-- Include working examples
-- Document token efficiency
-- Provide citations for claims
-- Pass our test suite
-- Include tests as appropriate
-
-## Version History
-
-- **v2.0.0** - Complete restructure as living reference implementation
-- **v1.0.0** - Initial template collection
-
-See git history for detailed change log.
+The structure, the auto-firing reviewer pattern, and the `determinism-reviewer`,
+`statistical-analysis-reviewer` and `voice-authenticator` concepts come from
+[rmurphey/claude-config](https://github.com/rmurphey/claude-config). This repo began as a
+fork of [rmurphey/claude-setup](https://github.com/rmurphey/claude-setup).
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) file for details.
-
----
-
-*A living reference implementation for the Claude Code community*  
-*This repository uses its own commands - explore our git history to see them in action*
-
-### 📚 Living Examples: Learning from Our History
-
-Explore how we use our own tools in practice. Each example demonstrates a key principle:
-
-#### Simplification & Token Efficiency  
-- [feat: remove all detailed command variants for token efficiency](../../commit/0e46070) — Less is more
-- [feat: remove 3 more complex maintenance commands](../../commit/993dd82) — Ruthless simplification
-- [refactor: remove script tests in favor of utility testing](../../commit/18f164d) — Focus testing effort
-
-#### Architecture & Design
-- [feat: rewrite setup.js with intelligent conflict handling](../../commit/3adfa17) — Smart automation
-- [feat: add repo-quality-auditor agent for comprehensive quality analysis](../../commit/e498add) — Agent vs command pattern
-- [refactor: migrate to GitHub Issues for task management](../../commit/bac950b) — Modern workflow
-
-#### Continuous Improvement
-- [fix: update docs script to count all commands recursively](../../commit/30f57e8) — Iterative refinement
-- [docs: add critical instruction to always use date command](../../commit/33b2c2f) — Learning from mistakes
+MIT — see [LICENSE](LICENSE).

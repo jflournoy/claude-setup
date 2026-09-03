@@ -1,119 +1,42 @@
-# Claude Code Command Templates - Git Ignore File
-# This repository is a reference implementation, so we track MORE than typical projects
+# This repository is checked out AS ~/.claude, a directory that also holds live
+# runtime state and credentials. So the rule is allowlist, not denylist: ignore
+# everything, then re-include only files this repo actually authors.
+#
+# A denylist would mean every new file Claude Code writes here shows up as
+# untracked and one careless `git add -A` away from being published. That
+# directory contains .credentials.json. Ignore-by-default is the safe direction.
+#
+# Verify after changing this file:
+#   git check-ignore -v .credentials.json      # must print a match
+#   git status --porcelain                     # must show only authored config
 
-# Dependencies
-node_modules/
-.npm
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-lerna-debug.log*
-.pnpm-debug.log*
+*
 
-# Build outputs (if any future builds are added)
-dist/
-build/
-*.tsbuildinfo
+# --- Authored config: the contents of this repo ---
+!.gitignore
+!.github/
+!.github/**
+!agents/
+!agents/**
+!commands/
+!commands/**
+!hooks/
+!hooks/**
+!test/
+!test/**
 
-# Testing
-coverage/
-.nyc_output
-*.lcov
-
-# Environment and local settings
-.env
-.env.local
-.env.*.local
-
-# --- Un-ignore this repo's product ---
-# The user's global ignore (~/.config/git/ignore) hides CLAUDE.md, CLAUDE_*.md and
-# .claude/ so AI config never lands in work repos. THIS repo is where that config
-# lives, so re-include it here (repo .gitignore outranks the global one).
-# Without these, `git status` silently hides new guides, commands, agents and hooks.
 !CLAUDE.md
 !CLAUDE_*.md
-!.claude/
+!README.md
+!LICENSE
+!settings.example.json
 
-# VS Code local-history snapshots: editor cruft, not product
-.history/
-
-# vexp: machine-local tooling. Hardcodes this machine's extension path and is
-# regenerated on every vexp update, so it is never worth pulling into another
-# project. Files stay on disk and keep working; they just do not travel.
-.vexp/
-.codex/
-.claude/hooks/vexp-*.sh
-.claude/CLAUDE.md
-.github/copilot-instructions.md
-
-# Local Claude settings (user-specific)
-.claude/settings.json
-.claude/settings.local.json
-.claude/workflows/
-.claude/issues/
-.claude/designs/
-
-# Monitoring status and runtime data
-.monitor-status.json
-.monitor-status-*.json
-.monitor-history.json
-.monitor-previous.json
-.monitor-config.json
-
-# OS files
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
-desktop.ini
-
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-!.vscode/tasks.json
-!.vscode/launch.json
-.idea/
-*.swp
-*.swo
-*~
-*.sublime-workspace
-
-# Temporary files
-*.tmp
-*.temp
-.cache/
-tmp/
-temp/
-
-# Logs (except session-history which we intentionally track)
-logs/
-*.log
-!session-history/**/*.log
-
-# Optional: Archive directories
-archive/
-old/
-backup/
-
-# Kiro directory
-.kiro
-
-# Python (if any Python scripts are added)
-__pycache__/
-*.py[cod]
-*$py.class
-.Python
-venv/
-ENV/
-
-# Note: We intentionally DO NOT ignore:
-# - .claude/commands/ (core product)
-# - .claude/agents/ (core product)  
-# - .claude/metrics.json (self-tracking)
-# - session-history/ (learning system)
-# - archive/ (archived workflow files)
-# - internal/ (project decisions)
-# - plans/ (project planning)
+# --- Never, under any circumstances ---
+# Re-ignored after the allowlist so no future rule above can expose them.
+.credentials.json
+.credentials.json.*
+settings.json
+settings.local.json
+**/.env
+**/*.pem
+**/*.key

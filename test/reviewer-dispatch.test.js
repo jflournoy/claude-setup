@@ -3,7 +3,7 @@ const assert = require('node:assert');
 const path = require('node:path');
 const { execFileSync } = require('node:child_process');
 
-const HOOK = path.join(__dirname, '..', '.claude', 'hooks', 'reviewer-dispatch.js');
+const HOOK = path.join(__dirname, '..', 'hooks', 'reviewer-dispatch.js');
 const { agentFor, filePathFrom, buildOutput, RULES } = require(HOOK);
 
 const run = (stdin, env = {}) =>

@@ -30,7 +30,7 @@ A good test survives a complete rewrite of the implementation. If refactoring br
 ## The TDD Command
 
 ```bash
-/tdd start "your feature"  # Guides through the TDD cycle
+# Write the failing test first, watch it fail, then make it pass.
 ```
 
 Consider TDD especially for complex features or when requirements are unclear.
