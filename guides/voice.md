@@ -1,10 +1,13 @@
 # Voice Guide: writing reader-facing prose as John Flournoy
 
-**Load this before writing or editing any reader-facing prose** in `analysis_reports/*.qmd`,
-in the string literals emitted by the R renderers (`R/report_section_renderers.R`,
-`R/report_helpers.R`, `R/analysis_functions.R`), in figure captions, in the supplement, and
-in any README or docs page a reader will see. The goal is that every sentence a reader sees
-in `docs/` reads as if John wrote it, at the level of formality the document calls for.
+**Load this before writing or editing any prose a reader will see** — report text, figure
+captions, README and docs pages, site copy, abstracts, strings a program prints. The goal is
+that every sentence a reader meets sounds like John wrote it, at the level of formality the
+document calls for.
+
+**This guide is the craft; the project supplies the scope.** Which files it covers, and where
+each sits on the register dial, belong in the project's own `CLAUDE.md` — they differ per
+repository and cannot be stated once for all of them. See "Declaring scope" below.
 
 The profile is distilled from nine pieces of his writing spanning three registers: journal
 papers (a 2016 empirical paper, the 2019 dissertation, the 2024 NeuroImage reliability
@@ -14,9 +17,10 @@ Lab (a 2024 comment on causal inference, a 2024 comment on whole-trait theory, a
 comment on the Challenger disaster). Where sources disagree within a register, the sole- or
 first-authored, less copyedited pieces win over lab-house-style passages.
 
-**The reports in this repository are not a paper.** They sit between the commentary register
-and the conversational one (§0), and that is the register the rest of this guide describes
-unless it says otherwise.
+**Unless a project says otherwise, this guide describes the commentary register**, leaning
+conversational — the middle of the dial in §0. That is the default because most reader-facing
+work sits there. A project whose output is a manuscript should read the paper column; one
+whose output is a public site should read the conversational column.
 
 ## 0. The register dial
 
@@ -37,20 +41,26 @@ what moves is how much of him is on the page.
 | Lists | inline enumeration | one list of full-sentence takeaways | short list of full-sentence imperatives to close ("Measure multiple times. Measure across situations. ...") |
 | "actually" | absent | rare | a genuine feature ("what is actually going on"; "I guess it still does, actually") |
 
-**Where the things in this repository sit.**
+**Declaring scope.** Each project states, in its own `CLAUDE.md`, which files this guide
+governs and where each sits on the dial. Copy this block and edit it:
 
-- `analysis_reports/*.qmd` and the supplement: **commentary, leaning conversational.** "We"
-  for the analysis and its decisions; "you, the reader" is fine in reading instructions
-  ("what you should look for in the lower panel"); "I" is fine for a judgment call or an
-  aside that is plainly one person's ("I don't find this convincing, for the reason
-  above"), about once per report. Contractions freely. Footnotes for asides. Short sentences
-  are allowed where a long build-up wants a punch, and one or two per section is plenty.
-- Figure captions and the strings emitted by `R/report_*.R`: **commentary.** These render
-  into every report and are read out of context, so they stay a notch more formal: no "I",
-  no anecdote, contractions sparingly.
-- README and docs landing prose: **conversational** is fine.
-- Anything destined for a manuscript: **paper**, and this guide's §1–5 apply with the paper
-  column of the table above.
+```markdown
+## Voice
+
+Load `~/.claude/guides/voice.md` before writing reader-facing prose. In this project:
+
+- <the main prose files>: **commentary, leaning conversational.**
+- <captions, or strings a program emits>: **commentary.** Read out of context, so a
+  notch more formal: no "I", no anecdote, contractions sparingly.
+- README and landing pages: **conversational.**
+- Anything destined for a manuscript: **paper**, with §1–5 read in the paper column.
+```
+
+Typical assignments, as a starting point: analysis reports and supplements sit at commentary
+leaning conversational — "we" for the analysis and its decisions, "you, the reader" in reading
+instructions ("what you should look for in the lower panel"), "I" about once per document for
+a judgment that is plainly one person's. Strings emitted by code are read out of context and
+stay a notch more formal. Public site copy sits fully conversational.
 
 **Calibration quotes**, three per register, so the dial has fixed points.
 
@@ -312,11 +322,11 @@ deliberately / by construction / on purpose as self-justification, "Welcome!",
 conversational opener is fine; "here's what you need to know" is not: the first is
 narrative, the second is a slide title.)
 
-## 6. Register: what the reports may do that a paper may not
+## 6. Register: what a report may do that a paper may not
 
-The reports sit at commentary-leaning-conversational (§0). Concretely:
+Taking a report at commentary-leaning-conversational (§0) as the worked case:
 
-| | Paper | Report (`analysis_reports/`, supplement) |
+| | Paper | Report |
 |---|---|---|
 | Person | we; passive for procedure | we; passive for procedure; "you" for the reader looking at the figure; "I" about once, for a judgment or aside |
 | Contractions | none | freely |
@@ -337,9 +347,11 @@ The reports sit at commentary-leaning-conversational (§0). Concretely:
 Captions and renderer strings stay a notch more formal than the table's report column: no
 "I", no anecdote, contractions sparingly.
 
-## 7. Tells to scrub from the current reports
+## 7. Tells to scrub
 
-Counts are from a sweep of prose outside code chunks (Aug 2026). Files from Dec 2025–Feb 2026
+The counts below come from a sweep of one real research-report repository (Aug 2026), kept
+because the *proportions* are the useful part — this is what a drafted-then-neglected corpus
+looks like. Files from Dec 2025–Feb 2026
 (`model_analysis_report`, `guessing_methods_report`, `measurement_variability_report`,
 `comprehensive_report_with_trajectories`, `data_check_FEEDBACK_WIN_LOSE`,
 `data_dictionaries`, `varcope_diagnostics_report`, `model_demo`, `sca_report`) carry the
@@ -369,12 +381,12 @@ italic-aside / self-justification tells and need only a light pass.
    which is fine).
 8. **Filler**: "robust" ×24 (mostly filler), "key" ×21, "critical" ×5, "comprehensive" ×2,
    "headline" ×9, "framework" ×6.
-9. **Renderer strings** (`R/report_helpers.R:278–283`, `R/report_section_renderers.R`
-   ~1346–1949, `R/analysis_functions.R` ~2066, 2141): same bold-lead-in captions and
-   sentence-fragment model descriptions. These render into every model report and must be
-   rewritten too; check `tests/` for string assertions before editing.
+9. **Strings emitted by code** — caption builders, model-description helpers, any function
+   that renders prose into a document. Same bold-lead-in captions and sentence-fragment
+   descriptions, and they reach every document the code produces, so they need rewriting too.
+   Check the test suite for string assertions before editing them.
 
-`scripts/voice_lint.sh [files...]` counts these tells per file so a rewrite can be checked
+A lint script, if the project has one, counts these tells per file so a rewrite can be checked
 programmatically rather than by eye. Read the `bullet` column as information, not a target:
 a report full of parallel lists can be fine. The columns that should go to zero are `bold`,
 `boiler`, `absent`, and `selfj`; `emdash` should fall to two or three per thousand words
@@ -604,7 +616,7 @@ After:
 The content was already right; the changes are the em-dashes to a parenthetical, "actually"
 to "in fact", and dropping "honest".
 
-**8h. A renderer string (`R/report_section_renderers.R:~1346`)**
+**8h. A string emitted by code (a caption builder)**
 
 Before:
 
@@ -766,6 +778,6 @@ sentence starting "Note that". The body sentence stays a single claim.
 - Every strong claim is immediately bounded by the condition under which it holds.
 - Numbers: verdict, then estimate with interval and N in parentheses, then verdict restated.
 - Vocabulary from §5 "Absent" list: zero occurrences. "actually", contractions, "you the
-  reader": fine in the reports, absent from captions and renderer strings.
-- Run `scripts/voice_lint.sh <file>`: `bold`, `boiler`, `absent`, `selfj` at zero,
-  `words_per_emdash` ≥ ~350, `casual` non-zero in a report is expected.
+  reader": fine in body prose, absent from captions and code-emitted strings.
+- If the project has a voice lint script: `bold`, `boiler`, `absent`, `selfj` at zero,
+  `words_per_emdash` ≥ ~350, `casual` non-zero in body prose is expected.

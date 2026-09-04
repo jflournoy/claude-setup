@@ -41,6 +41,7 @@ Loaded on demand — `CLAUDE.md` says when.
 |---|---|
 | `guides/bayesian-production.md` | Writing competent Stan, and making it fast enough to run daily. Every claim carries its evidence class; verified against CmdStan 2.35 and 2.38 |
 | `guides/voice.md` | Writing prose a reader sees, in the author's own register |
+| `guides/r-development.md` | data.table over tidyverse, targets, testthat; fit with cmdstanr and read with posterior, never the rstan-backed brms accessors |
 | `guides/tdd.md`, `guides/standards.md`, `guides/workflow.md` | Test discipline, code quality, collaboration |
 
 ### Reviewer agents

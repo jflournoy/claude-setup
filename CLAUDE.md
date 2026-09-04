@@ -142,8 +142,18 @@ Three are on demand — ask for them by name:
 All of them report findings and never edit. Silence them for a session with
 `CLAUDE_REVIEWER_DISPATCH=0`. Adding a file type is one entry in `RULES` plus a test.
 
+### 📐 Load for R Work
+
+- [~/.claude/guides/r-development.md](~/.claude/guides/r-development.md) — Writing R:
+  data.table over tidyverse, targets pipelines, testthat with reference semantics
+  - Covers: approved packages, the tidyverse→data.table substitution table, arrow I/O
+  - Includes the cmdstanr/posterior rule: the rstan-backed brms accessors can hard-crash
+    R with SIGABRT in a container where rstan is broken
+
 ### ✍️ Load for Reader-Facing Prose
 
-- [~/.claude/guides/voice.md](~/.claude/guides/voice.md) — Before writing or editing any prose a reader will see
+- [~/.claude/guides/voice.md](~/.claude/guides/voice.md) — Before writing or editing any prose a reader will see.
+  The guide is the craft; each project declares in its own `CLAUDE.md` which files it covers
+  and where they sit on the register dial
   - Report `.qmd` files, figure captions, README and docs pages, supplements
   - Defines the register dial (paper / commentary / conversational) and the rules for each
