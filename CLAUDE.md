@@ -1,6 +1,7 @@
-# CLAUDE.md - Project AI Guidelines
+# CLAUDE.md — Global AI Guidelines
 
-> **Note to Claude:** This file contains critical rules and commands that apply to all work. For task-specific guidance, consult the guides listed at the bottom (TDD, standards, Bayesian modeling, writing voice). Load them based on what you're working on—don't assume you need everything.
+> **Note to Claude:** This file lives at `~/.claude/CLAUDE.md` and is loaded in **every**
+> project. It holds rules that apply to all work. For task-specific guidance, consult the guides listed at the bottom (TDD, standards, Bayesian modeling, writing voice). Load them based on what you're working on—don't assume you need everything.
 
 ## Critical Rules (Always Apply)
 
@@ -97,25 +98,25 @@ capture, `TodoWrite` and `gh` replace todo management, `/loop` and `/schedule` r
 monitoring, and `/code-review` and `/simplify` replace the quality commands. They were
 removed rather than maintained in parallel.
 
-See [CLAUDE_workflow.md](CLAUDE_workflow.md) for full collaboration guidelines.
+See [~/.claude/guides/workflow.md](~/.claude/guides/workflow.md) for full collaboration guidelines.
 
 ## When to Consult Each Guide
 
 ### 🔴 Load for Feature/Bug Work
 
-- [CLAUDE_tdd.md](CLAUDE_tdd.md) — When implementing features, fixing bugs, or refactoring
+- [~/.claude/guides/tdd.md](~/.claude/guides/tdd.md) — When implementing features, fixing bugs, or refactoring
   - Defines how to write tests first, then code
   - Required for any non-trivial code change
 
 ### 📋 Load for General Development
 
-- [CLAUDE_standards.md](CLAUDE_standards.md) — Code quality expectations, testing strategy
+- [~/.claude/guides/standards.md](~/.claude/guides/standards.md) — Code quality expectations, testing strategy
   - Consult when: running tests, committing code, reviewing architecture
   - Covers: complexity limits, test standards, markdown validation, architecture principles
 
 ### 📊 Load for Statistical / Modeling Work
 
-- [CLAUDE_bayesian-production-tricks.md](CLAUDE_bayesian-production-tricks.md) — When working
+- [~/.claude/guides/bayesian-production.md](~/.claude/guides/bayesian-production.md) — When working
   on Bayesian models, Stan code, MCMC diagnostics, or time-series inference
   - Covers: Kalman filters, Pathfinder, reparameterization, correlation-matrix priors,
     regularized horseshoe, warm-starting, R̂/ESS thresholds
@@ -136,13 +137,13 @@ Three are on demand — ask for them by name:
 - `statistical-analysis-reviewer` — skeptical peer review of a finished analysis, before it
   is shared. Design, assumptions, inference, and whether the conclusion is supported.
 - `determinism-reviewer` — finds work done by model reasoning that tested code could do.
-- `voice-authenticator` — checks prose against [CLAUDE_voice.md](CLAUDE_voice.md).
+- `voice-authenticator` — checks prose against [~/.claude/guides/voice.md](~/.claude/guides/voice.md).
 
 All of them report findings and never edit. Silence them for a session with
 `CLAUDE_REVIEWER_DISPATCH=0`. Adding a file type is one entry in `RULES` plus a test.
 
 ### ✍️ Load for Reader-Facing Prose
 
-- [CLAUDE_voice.md](CLAUDE_voice.md) — Before writing or editing any prose a reader will see
+- [~/.claude/guides/voice.md](~/.claude/guides/voice.md) — Before writing or editing any prose a reader will see
   - Report `.qmd` files, figure captions, README and docs pages, supplements
   - Defines the register dial (paper / commentary / conversational) and the rules for each

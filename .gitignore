@@ -26,7 +26,8 @@
 !test/**
 
 !CLAUDE.md
-!CLAUDE_*.md
+!guides/
+!guides/**
 !README.md
 !LICENSE
 !settings.example.json

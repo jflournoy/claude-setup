@@ -721,7 +721,7 @@ re-verified directly. This extracts each complete program and compiles it:
 python3 - <<'EOF'
 import re, subprocess, tempfile, os
 STANC = os.path.expanduser("~/.cmdstan/cmdstan-2.38.0/bin/stanc")
-src = open("CLAUDE_bayesian-production-tricks.md").read()
+src = open("bayesian-production.md").read()
 for i, b in enumerate(re.findall(r"```stan\n(.*?)```", src, re.S), 1):
     if not ("parameters" in b and "model" in b and "data" in b):
         print(f"block {i}: fragment (scaffold to check)"); continue

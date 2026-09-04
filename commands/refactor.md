@@ -97,9 +97,9 @@ estimand-bearing code, 2 wins and the question does not go to the user.
 
 ## Before analyzing
 
-Read `CLAUDE.md` (the no-silent-fallbacks rule and the container North Star) and, for
-R targets, `CLAUDE_r-devel.md`. For anything you propose changing, `CLAUDE_tdd.md`
-governs how the change lands.
+Read `~/.claude/CLAUDE.md` (the no-silent-fallbacks rule and the container North Star),
+plus the project's own `CLAUDE.md` if it has one. For anything you propose changing,
+`~/.claude/guides/tdd.md` governs how the change lands.
 
 ## Process
 
